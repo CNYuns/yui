@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-frontend:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,117 +18,58 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build frontend
         working-directory: frontend
         run: npm run build
 
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: backend/dist
-
-  build-backend:
-    needs: build-frontend
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            suffix: ''
-          - goos: linux
-            goarch: arm64
-            suffix: ''
-          - goos: linux
-            goarch: arm
-            goarm: 7
-            suffix: ''
-          - goos: windows
-            goarch: amd64
-            suffix: '.exe'
-          - goos: windows
-            goarch: arm64
-            suffix: '.exe'
-          - goos: darwin
-            goarch: amd64
-            suffix: ''
-          - goos: darwin
-            goarch: arm64
-            suffix: ''
-
-    steps:
-      - uses: actions/checkout@v4
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache-dependency-path: backend/go.sum
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: backend/dist
-
-      - name: Build binary
-        working-directory: backend
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
-          CGO_ENABLED: 0
+      - name: Build binaries
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          go build -ldflags "-s -w -X main.Version=$VERSION" -o ../y-ui-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} ./cmd/y-ui
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
-
-  release:
-    needs: build-backend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Prepare release files
-        run: |
           mkdir -p release
-          for dir in artifacts/y-ui-*; do
-            if [ -d "$dir" ]; then
-              cp "$dir"/* release/ 2>/dev/null || true
-            fi
-          done
+
+          # Linux amd64
+          cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-amd64 ./cmd/y-ui && cd ..
+
+          # Linux arm64
+          cd backend && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-arm64 ./cmd/y-ui && cd ..
+
+          # Linux arm
+          cd backend && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-arm ./cmd/y-ui && cd ..
+
+          # Windows amd64
+          cd backend && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-windows-amd64.exe ./cmd/y-ui && cd ..
+
+          # Windows arm64
+          cd backend && GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-windows-arm64.exe ./cmd/y-ui && cd ..
+
+          # macOS amd64
+          cd backend && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-darwin-amd64 ./cmd/y-ui && cd ..
+
+          # macOS arm64
+          cd backend && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-darwin-arm64 ./cmd/y-ui && cd ..
+
           # Copy install script
           cp install.sh release/
-          ls -la release/
 
-      - name: Create checksums
-        working-directory: release
-        run: |
-          sha256sum * > checksums.txt
+          # Create checksums
+          cd release && sha256sum * > checksums.txt
+
+          ls -la
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            release/*
+          files: release/*
           body: |
             ## Y-UI ${{ github.ref_name }}
 
@@ -140,9 +81,9 @@ jobs:
             bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
             ```
 
-            ### 手动下载
+            ### 下载
 
-            | 平台 | 架构 | 下载 |
+            | 平台 | 架构 | 文件 |
             |------|------|------|
             | Linux | amd64 | y-ui-linux-amd64 |
             | Linux | arm64 | y-ui-linux-arm64 |
@@ -150,21 +91,24 @@ jobs:
             | Windows | amd64 | y-ui-windows-amd64.exe |
             | Windows | arm64 | y-ui-windows-arm64.exe |
             | macOS | amd64 | y-ui-darwin-amd64 |
-            | macOS | arm64 (M1/M2) | y-ui-darwin-arm64 |
+            | macOS | arm64 | y-ui-darwin-arm64 |
 
             ### 管理命令
 
-            安装后使用 `y-ui` 命令管理：
-            - `y-ui` - 打开交互式菜单
-            - `y-ui start` - 启动服务
-            - `y-ui stop` - 停止服务
-            - `y-ui restart` - 重启服务
-            - `y-ui status` - 查看状态
-            - `y-ui log` - 查看日志
+            ```bash
+            y-ui              # 交互式菜单
+            y-ui start        # 启动
+            y-ui stop         # 停止
+            y-ui restart      # 重启
+            y-ui status       # 状态
+            y-ui log          # 日志
+            y-ui update       # 更新
+            y-ui uninstall    # 卸载
+            ```
 
-            ### 更新日志
+            ### 支持协议
 
-            详见 [README](https://github.com/${{ github.repository }})
+            VMess, VLESS, Trojan, Shadowsocks, SOCKS5, HTTP/HTTPS
           draft: false
           prerelease: false
         env:
