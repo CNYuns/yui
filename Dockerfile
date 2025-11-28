@@ -16,7 +16,7 @@ RUN go mod download
 COPY backend/ ./
 COPY --from=frontend-builder /app/backend/dist ./dist
 
-ARG VERSION=1.1.0
+ARG VERSION=1.1.1
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X main.Version=${VERSION}" -o /y-ui-server ./cmd/y-ui
 
 FROM alpine:latest
