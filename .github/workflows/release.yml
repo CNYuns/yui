@@ -36,36 +36,55 @@ jobs:
         working-directory: backend
         run: go mod tidy
 
-      - name: Build binaries
+      - name: Build and package
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           mkdir -p release
 
+          # 准备打包目录
+          mkdir -p package/dist
+          cp -r backend/dist/* package/dist/
+          cp config.example.yaml package/config.yaml
+          cp install.sh package/
+
           # Linux amd64
-          cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-amd64 ./cmd/y-ui && cd ..
+          cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
+          tar -czvf release/y-ui-linux-amd64.tar.gz -C package .
+          rm package/y-ui-server
 
           # Linux arm64
-          cd backend && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-arm64 ./cmd/y-ui && cd ..
+          cd backend && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
+          tar -czvf release/y-ui-linux-arm64.tar.gz -C package .
+          rm package/y-ui-server
 
           # Linux arm
-          cd backend && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-linux-arm ./cmd/y-ui && cd ..
+          cd backend && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
+          tar -czvf release/y-ui-linux-arm.tar.gz -C package .
+          rm package/y-ui-server
 
           # Windows amd64
-          cd backend && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-windows-amd64.exe ./cmd/y-ui && cd ..
+          cd backend && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server.exe ./cmd/y-ui && cd ..
+          cd package && zip -r ../release/y-ui-windows-amd64.zip . && cd ..
+          rm package/y-ui-server.exe
 
           # Windows arm64
-          cd backend && GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-windows-arm64.exe ./cmd/y-ui && cd ..
+          cd backend && GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server.exe ./cmd/y-ui && cd ..
+          cd package && zip -r ../release/y-ui-windows-arm64.zip . && cd ..
+          rm package/y-ui-server.exe
 
           # macOS amd64
-          cd backend && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-darwin-amd64 ./cmd/y-ui && cd ..
+          cd backend && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
+          tar -czvf release/y-ui-darwin-amd64.tar.gz -C package .
+          rm package/y-ui-server
 
           # macOS arm64
-          cd backend && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../release/y-ui-darwin-arm64 ./cmd/y-ui && cd ..
+          cd backend && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
+          tar -czvf release/y-ui-darwin-arm64.tar.gz -C package .
 
-          # Copy install script
+          # 单独的安装脚本
           cp install.sh release/
 
-          # Create checksums
+          # 创建校验和
           cd release && sha256sum * > checksums.txt
 
           ls -la
@@ -79,23 +98,29 @@ jobs:
 
             基于 Xray-core 的 Web 管理面板
 
-            ### 一键安装
+            ### 一键安装 (推荐)
 
             ```bash
             bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
             ```
 
+            ### 手动安装
+
+            1. 下载对应平台的压缩包
+            2. 解压到 `/usr/local/y-ui/`
+            3. 运行 `./y-ui-server --config config.yaml`
+
             ### 下载
 
             | 平台 | 架构 | 文件 |
             |------|------|------|
-            | Linux | amd64 | y-ui-linux-amd64 |
-            | Linux | arm64 | y-ui-linux-arm64 |
-            | Linux | armv7 | y-ui-linux-arm |
-            | Windows | amd64 | y-ui-windows-amd64.exe |
-            | Windows | arm64 | y-ui-windows-arm64.exe |
-            | macOS | amd64 | y-ui-darwin-amd64 |
-            | macOS | arm64 | y-ui-darwin-arm64 |
+            | Linux | amd64 | y-ui-linux-amd64.tar.gz |
+            | Linux | arm64 | y-ui-linux-arm64.tar.gz |
+            | Linux | armv7 | y-ui-linux-arm.tar.gz |
+            | Windows | amd64 | y-ui-windows-amd64.zip |
+            | Windows | arm64 | y-ui-windows-arm64.zip |
+            | macOS | amd64 | y-ui-darwin-amd64.tar.gz |
+            | macOS | arm64 | y-ui-darwin-arm64.tar.gz |
 
             ### 管理命令
 

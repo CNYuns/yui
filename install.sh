@@ -86,7 +86,7 @@ install_deps() {
 get_latest_version() {
     local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
     if [[ -z "$latest" ]]; then
-        echo "v1.1.1"
+        echo "v1.1.2"
     else
         echo "$latest"
     fi
@@ -128,9 +128,9 @@ install_yui() {
     mkdir -p /var/log/y-ui
     mkdir -p /etc/xray
 
-    # 下载
-    local download_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/y-ui-linux-${arch}"
-    local temp_file="/tmp/y-ui-linux-${arch}"
+    # 下载压缩包
+    local download_url="https://github.com/${GITHUB_REPO}/releases/download/${version}/y-ui-linux-${arch}.tar.gz"
+    local temp_file="/tmp/y-ui-linux-${arch}.tar.gz"
 
     download "$download_url" "$temp_file"
 
@@ -140,40 +140,14 @@ install_yui() {
         systemctl stop $SERVICE_NAME
     fi
 
-    # 安装二进制
-    mv "$temp_file" "$INSTALL_DIR/y-ui-server"
+    # 解压安装
+    echo -e "${CYAN}解压安装包...${NC}"
+    tar -xzf "$temp_file" -C "$INSTALL_DIR"
+    rm -f "$temp_file"
+
+    # 设置权限
     chmod +x "$INSTALL_DIR/y-ui-server"
-
-    # 创建配置文件（如果不存在）
-    if [[ ! -f "$INSTALL_DIR/config.yaml" ]]; then
-        cat > "$INSTALL_DIR/config.yaml" << 'EOF'
-server:
-  addr: ":8080"
-  mode: "release"
-
-auth:
-  token_ttl_hours: 24
-
-database:
-  driver: "sqlite"
-  dsn: "y-ui.db"
-
-xray:
-  binary_path: "/usr/local/bin/xray"
-  config_path: "/etc/xray/config.json"
-  assets_path: "/usr/local/share/xray"
-
-tls:
-  auto_acme: false
-  cert_path: "/etc/y-ui/certs"
-  email: ""
-
-log:
-  level: "info"
-  output: "/var/log/y-ui/y-ui.log"
-EOF
-        echo -e "${GREEN}已创建默认配置文件${NC}"
-    fi
+    chmod 600 "$INSTALL_DIR/config.yaml" 2>/dev/null || true
 
     # 安装 y-ui 管理命令
     install_cli
@@ -219,7 +193,7 @@ SERVICE_NAME="y-ui"
 show_menu() {
     clear
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}       Y-UI 管理面板 v1.1.1${NC}"
+    echo -e "${GREEN}       Y-UI 管理面板 v1.1.2${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "${CYAN}--- 服务管理 ---${NC}"
