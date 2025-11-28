@@ -370,6 +370,10 @@ func (m *Manager) buildInboundSettings(protocol string, clients []models.Client)
 		return m.buildTrojanSettings(clients)
 	case "shadowsocks":
 		return m.buildShadowsocksSettings(clients)
+	case "socks":
+		return m.buildSocksSettings(clients)
+	case "http":
+		return m.buildHTTPSettings(clients)
 	default:
 		return json.RawMessage(`{}`)
 	}
@@ -456,6 +460,66 @@ func (m *Manager) buildShadowsocksSettings(clients []models.Client) json.RawMess
 		"method":   "aes-256-gcm",
 		"password": clients[0].UUID,
 		"network":  "tcp,udp",
+	}
+
+	data, _ := json.Marshal(settings)
+	return data
+}
+
+func (m *Manager) buildSocksSettings(clients []models.Client) json.RawMessage {
+	// SOCKS5 协议配置
+	type socksAccount struct {
+		User string `json:"user"`
+		Pass string `json:"pass"`
+	}
+
+	accounts := make([]socksAccount, 0, len(clients))
+	for _, c := range clients {
+		accounts = append(accounts, socksAccount{
+			User: c.Email,
+			Pass: c.UUID,
+		})
+	}
+
+	settings := map[string]interface{}{
+		"auth":    "password",
+		"udp":     true,
+		"ip":      "127.0.0.1",
+		"accounts": accounts,
+	}
+
+	// 如果没有账户，允许无认证
+	if len(accounts) == 0 {
+		settings["auth"] = "noauth"
+		delete(settings, "accounts")
+	}
+
+	data, _ := json.Marshal(settings)
+	return data
+}
+
+func (m *Manager) buildHTTPSettings(clients []models.Client) json.RawMessage {
+	// HTTP/HTTPS 代理配置
+	type httpAccount struct {
+		User string `json:"user"`
+		Pass string `json:"pass"`
+	}
+
+	accounts := make([]httpAccount, 0, len(clients))
+	for _, c := range clients {
+		accounts = append(accounts, httpAccount{
+			User: c.Email,
+			Pass: c.UUID,
+		})
+	}
+
+	settings := map[string]interface{}{
+		"timeout":        300,
+		"allowTransparent": false,
+	}
+
+	if len(accounts) > 0 {
+		settings["accounts"] = accounts
 	}
 
 	data, _ := json.Marshal(settings)
