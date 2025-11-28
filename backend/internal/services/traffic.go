@@ -3,8 +3,8 @@ package services
 import (
 	"time"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
 )
 
 type TrafficService struct{}

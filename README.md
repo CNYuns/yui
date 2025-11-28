@@ -1,8 +1,16 @@
-# XPanel
+# Y-UI
 
 基于 Xray-core 的 Web 管理面板，提供可视化的代理服务管理界面。
 
 > **重要提示**：本软件仅供个人学习和研究使用，请务必遵守当地法律法规。详见 [LICENSE](LICENSE)。
+
+## 一键安装
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+```
+
+安装完成后使用 `y-ui` 命令管理。
 
 ## 功能特性
 
@@ -15,6 +23,64 @@
 - **审计日志**：记录所有操作日志
 - **RBAC 权限**：管理员、操作员、查看者三级权限
 - **安全特性**：自动生成 JWT 密钥、登录速率限制、CORS 白名单
+
+## 系统特性
+
+- **自启动**：systemd 服务，开机自动启动
+- **保活机制**：进程异常退出自动重启
+- **资源限制**：内存 512M，CPU 80% 上限
+- **安全加固**：最小权限原则运行
+- **看门狗**：30 秒自检周期
+
+## 管理命令
+
+```bash
+# 交互式菜单
+y-ui
+
+# 快捷命令
+y-ui start      # 启动服务
+y-ui stop       # 停止服务
+y-ui restart    # 重启服务
+y-ui status     # 查看状态
+y-ui log        # 查看日志
+y-ui update     # 更新 Y-UI
+y-ui uninstall  # 卸载 Y-UI
+```
+
+### 交互式菜单
+
+```
+========================================
+       Y-UI 管理面板 v1.1.0
+========================================
+
+--- 服务管理 ---
+  1. 启动 Y-UI
+  2. 停止 Y-UI
+  3. 重启 Y-UI
+  4. 查看状态
+  5. 查看日志
+
+--- 配置管理 ---
+  6. 修改端口
+  7. 重置管理员
+  8. 查看配置
+  9. 编辑配置
+
+--- 系统管理 ---
+  10. 更新 Y-UI
+  11. 卸载 Y-UI
+  12. 设置开机自启
+  13. 取消开机自启
+
+--- Xray 管理 ---
+  14. 重载 Xray 配置
+  15. 重启 Xray
+  16. 查看 Xray 状态
+
+  0. 退出
+```
 
 ## 技术栈
 
@@ -33,31 +99,25 @@
 - Vite
 - ECharts
 
-## 快速开始
+## 手动安装
 
-### 环境要求
-
-- Go 1.22 或更高版本
-- Node.js 18 或更高版本
-- Xray-core（需预先安装）
-
-### 下载安装
+### 下载
 
 从 [Releases](../../releases) 页面下载对应平台的二进制文件：
 
 | 平台 | 架构 | 文件名 |
 |------|------|--------|
-| Linux | amd64 | xpanel-linux-amd64 |
-| Linux | arm64 | xpanel-linux-arm64 |
-| Linux | armv7 | xpanel-linux-arm |
-| Windows | amd64 | xpanel-windows-amd64.exe |
-| Windows | arm64 | xpanel-windows-arm64.exe |
-| macOS | amd64 | xpanel-darwin-amd64 |
-| macOS | arm64 | xpanel-darwin-arm64 |
+| Linux | amd64 | y-ui-linux-amd64 |
+| Linux | arm64 | y-ui-linux-arm64 |
+| Linux | armv7 | y-ui-linux-arm |
+| Windows | amd64 | y-ui-windows-amd64.exe |
+| Windows | arm64 | y-ui-windows-arm64.exe |
+| macOS | amd64 | y-ui-darwin-amd64 |
+| macOS | arm64 | y-ui-darwin-arm64 |
 
-### 配置文件
+### 配置
 
-首次启动会自动生成配置文件，也可手动创建 `config.yaml`：
+首次启动会自动生成配置文件 `/usr/local/y-ui/config.yaml`：
 
 ```yaml
 server:
@@ -70,64 +130,27 @@ auth:
 
 database:
   driver: "sqlite"
-  dsn: "xpanel.db"
+  dsn: "y-ui.db"
 
 xray:
   binary_path: "/usr/local/bin/xray"
   config_path: "/etc/xray/config.json"
 
-tls:
-  auto_acme: false
-  cert_path: "/etc/xpanel/certs"
-  email: ""
-
 log:
   level: "info"
-  output: "stdout"
+  output: "/var/log/y-ui/y-ui.log"
 ```
-
-### 启动服务
-
-```bash
-# 添加执行权限
-chmod +x xpanel-linux-amd64
-
-# 启动（首次启动自动生成安全配置）
-./xpanel-linux-amd64 --config config.yaml
-```
-
-### 首次使用
-
-1. 访问 `http://your-server:8080`
-2. 系统会提示初始化管理员账号
-3. 设置邮箱和密码后即可登录
 
 ## Docker 部署
 
-### 使用 Docker Compose
-
 ```bash
-# 克隆仓库
-git clone https://github.com/CNYuns/Yun.git
-cd Yun/xpanel
-
-# 启动
-docker-compose up -d
-```
-
-### 手动构建
-
-```bash
-# 构建镜像
-docker build -t xpanel .
-
-# 运行容器
 docker run -d \
-  --name xpanel \
+  --name y-ui \
+  --restart=always \
   -p 8080:8080 \
-  -v $(pwd)/data:/app/data \
+  -v /etc/y-ui:/usr/local/y-ui \
   -v /etc/xray:/etc/xray \
-  xpanel
+  cnyuns/y-ui:latest
 ```
 
 ## 从源码构建
@@ -135,28 +158,13 @@ docker run -d \
 ```bash
 # 克隆仓库
 git clone https://github.com/CNYuns/Yun.git
-cd Yun/xpanel
+cd Yun
 
-# 安装前端依赖并构建
-cd frontend
-npm install
-npm run build
-cd ..
-
-# 构建后端
-cd backend
-go build -o ../xpanel ./cmd/xpanel
-cd ..
+# 构建
+make build
 
 # 运行
-./xpanel --config config.yaml
-```
-
-或使用 Makefile：
-
-```bash
-make build
-./xpanel --config config.yaml
+./y-ui-server --config config.yaml
 ```
 
 ## API 文档
@@ -169,23 +177,12 @@ make build
 Authorization: Bearer <token>
 ```
 
-### 响应格式
-
-```json
-{
-  "code": 0,
-  "msg": "ok",
-  "data": {}
-}
-```
-
 ### 主要接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | /api/v1/auth/login | 登录 |
 | POST | /api/v1/auth/logout | 登出 |
-| GET | /api/v1/auth/profile | 获取用户信息 |
 | GET | /api/v1/clients | 获取用户列表 |
 | POST | /api/v1/clients | 创建用户 |
 | GET | /api/v1/inbounds | 获取入站列表 |
@@ -194,14 +191,6 @@ Authorization: Bearer <token>
 | GET | /api/v1/system/status | 获取系统状态 |
 | POST | /api/v1/system/reload | 重载 Xray 配置 |
 
-## 权限说明
-
-| 角色 | 说明 | 权限范围 |
-|------|------|----------|
-| admin | 管理员 | 全部功能 |
-| operator | 操作员 | 用户管理、入站管理 |
-| viewer | 查看者 | 仅查看 |
-
 ## 安全特性
 
 - **JWT 密钥**：首次启动自动生成 64 位安全随机密钥
@@ -209,66 +198,52 @@ Authorization: Bearer <token>
 - **CORS 安全**：基于白名单的跨域策略
 - **文件权限**：配置文件和证书使用 0600 权限
 - **安全头部**：自动添加 CSP、HSTS 等安全头
+- **进程隔离**：systemd 安全加固配置
 
-## 开发指南
-
-### 目录结构
+## 目录结构
 
 ```
-xpanel/
-├── backend/                # Go 后端
-│   ├── cmd/xpanel/        # 入口文件
-│   ├── internal/          # 内部包
-│   │   ├── config/        # 配置管理
-│   │   ├── database/      # 数据库
-│   │   ├── handlers/      # API 处理器
-│   │   ├── middleware/    # 中间件
-│   │   ├── models/        # 数据模型
-│   │   ├── scheduler/     # 调度任务
-│   │   ├── services/      # 业务逻辑
-│   │   └── xray/          # Xray 管理
-│   └── pkg/               # 公共包
-├── frontend/              # Vue3 前端
-│   ├── src/
-│   │   ├── api/           # API 调用
-│   │   ├── components/    # 组件
-│   │   ├── router/        # 路由
-│   │   ├── stores/        # 状态管理
-│   │   └── views/         # 页面
-│   └── ...
-├── .github/workflows/     # CI/CD
-├── Dockerfile
-├── docker-compose.yml
-└── Makefile
-```
+/usr/local/y-ui/           # 安装目录
+├── y-ui-server            # 主程序
+├── config.yaml            # 配置文件
+├── y-ui.db                # 数据库
+└── dist/                  # 前端文件
 
-### 本地开发
-
-```bash
-# 启动后端（开发模式）
-make dev-backend
-
-# 启动前端（开发模式）
-make dev-frontend
+/var/log/y-ui/             # 日志目录
+/etc/xray/                 # Xray 配置
 ```
 
 ## 常见问题
 
 ### Q: 如何重置管理员密码？
 
-删除数据库文件 `xpanel.db`，重新启动后会提示创建新管理员。
+```bash
+y-ui
+# 选择 7. 重置管理员
+```
 
-### Q: Xray 配置在哪里？
+### Q: 如何修改端口？
 
-配置文件默认路径为 `/etc/xray/config.json`，可在 `config.yaml` 中修改。
+```bash
+y-ui
+# 选择 6. 修改端口
+```
 
 ### Q: 如何查看日志？
 
-日志默认输出到标准输出，可在 `config.yaml` 中配置输出到文件。
+```bash
+y-ui log
+# 或
+journalctl -u y-ui -f
+```
 
-### Q: JWT 密钥在哪里？
+### Q: 如何更新？
 
-首次启动时自动生成并保存到 `config.yaml` 文件中。
+```bash
+y-ui update
+# 或
+bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+```
 
 ## 许可证
 

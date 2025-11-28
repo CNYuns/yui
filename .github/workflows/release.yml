@@ -88,13 +88,13 @@ jobs:
           CGO_ENABLED: 0
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          go build -ldflags "-s -w -X main.version=$VERSION" -o ../xpanel-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} ./cmd/xpanel
+          go build -ldflags "-s -w -X main.Version=$VERSION" -o ../y-ui-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }} ./cmd/y-ui
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xpanel-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: xpanel-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
 
   release:
     needs: build-backend
@@ -110,11 +110,13 @@ jobs:
       - name: Prepare release files
         run: |
           mkdir -p release
-          for dir in artifacts/xpanel-*; do
+          for dir in artifacts/y-ui-*; do
             if [ -d "$dir" ]; then
               cp "$dir"/* release/ 2>/dev/null || true
             fi
           done
+          # Copy install script
+          cp install.sh release/
           ls -la release/
 
       - name: Create checksums
@@ -128,28 +130,41 @@ jobs:
           files: |
             release/*
           body: |
-            ## XPanel ${{ github.ref_name }}
+            ## Y-UI ${{ github.ref_name }}
 
-            ### 下载
+            基于 Xray-core 的 Web 管理面板
+
+            ### 一键安装
+
+            ```bash
+            bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+            ```
+
+            ### 手动下载
 
             | 平台 | 架构 | 下载 |
             |------|------|------|
-            | Linux | amd64 | xpanel-linux-amd64 |
-            | Linux | arm64 | xpanel-linux-arm64 |
-            | Linux | armv7 | xpanel-linux-arm |
-            | Windows | amd64 | xpanel-windows-amd64.exe |
-            | Windows | arm64 | xpanel-windows-arm64.exe |
-            | macOS | amd64 | xpanel-darwin-amd64 |
-            | macOS | arm64 (M1/M2) | xpanel-darwin-arm64 |
+            | Linux | amd64 | y-ui-linux-amd64 |
+            | Linux | arm64 | y-ui-linux-arm64 |
+            | Linux | armv7 | y-ui-linux-arm |
+            | Windows | amd64 | y-ui-windows-amd64.exe |
+            | Windows | arm64 | y-ui-windows-arm64.exe |
+            | macOS | amd64 | y-ui-darwin-amd64 |
+            | macOS | arm64 (M1/M2) | y-ui-darwin-arm64 |
 
-            ### 安装说明
+            ### 管理命令
 
-            1. 下载对应平台的二进制文件
-            2. 添加执行权限：`chmod +x xpanel-*`
-            3. 创建配置文件：`cp config.example.yaml config.yaml`
-            4. 启动服务：`./xpanel-linux-amd64 --config config.yaml`
+            安装后使用 `y-ui` 命令管理：
+            - `y-ui` - 打开交互式菜单
+            - `y-ui start` - 启动服务
+            - `y-ui stop` - 停止服务
+            - `y-ui restart` - 重启服务
+            - `y-ui status` - 查看状态
+            - `y-ui log` - 查看日志
 
-            详细文档请参阅 [README](https://github.com/${{ github.repository }})
+            ### 更新日志
+
+            详见 [README](https://github.com/${{ github.repository }})
           draft: false
           prerelease: false
         env:

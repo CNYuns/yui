@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"xpanel/pkg/response"
+	"y-ui/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,8 +3,8 @@ package handlers
 import (
 	"strconv"
 
-	"xpanel/internal/services"
-	"xpanel/pkg/response"
+	"y-ui/internal/services"
+	"y-ui/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

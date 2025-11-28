@@ -3,9 +3,8 @@ node_modules/
 vendor/
 
 # Build outputs - only ignore binaries in root
-/xpanel
-/xpanel.exe
-/xpanel-*
+/y-ui-*
+/y-ui-server
 backend/dist/
 frontend/dist/
 

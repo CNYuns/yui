@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"xpanel/internal/config"
-	"xpanel/internal/database"
-	"xpanel/internal/models"
+	"y-ui/internal/config"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
 )
 
 type Manager struct {

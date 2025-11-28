@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"

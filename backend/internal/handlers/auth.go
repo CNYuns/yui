@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"xpanel/internal/middleware"
-	"xpanel/internal/services"
-	"xpanel/pkg/response"
+	"y-ui/internal/middleware"
+	"y-ui/internal/services"
+	"y-ui/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )

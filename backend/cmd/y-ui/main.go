@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"xpanel/internal/config"
-	"xpanel/internal/database"
-	"xpanel/internal/handlers"
-	"xpanel/internal/middleware"
-	"xpanel/internal/scheduler"
-	"xpanel/internal/services"
-	"xpanel/internal/xray"
+	"y-ui/internal/config"
+	"y-ui/internal/database"
+	"y-ui/internal/handlers"
+	"y-ui/internal/middleware"
+	"y-ui/internal/scheduler"
+	"y-ui/internal/services"
+	"y-ui/internal/xray"
 
 	"github.com/gin-gonic/gin"
 )
@@ -76,7 +76,8 @@ func main() {
 
 	// 优雅关闭
 	go func() {
-		fmt.Printf("XPanel %s 启动成功，监听: %s\n", Version, cfg.Server.Addr)
+		fmt.Printf("Y-UI %s 启动成功，监听: %s\n", Version, cfg.Server.Addr)
+		fmt.Println("管理命令: y-ui")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("服务器错误: %v\n", err)
 		}

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"xpanel/internal/config"
-	"xpanel/pkg/response"
+	"y-ui/internal/config"
+	"y-ui/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"

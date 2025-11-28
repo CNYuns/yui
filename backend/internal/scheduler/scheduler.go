@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"xpanel/internal/services"
-	"xpanel/internal/xray"
+	"y-ui/internal/services"
+	"y-ui/internal/xray"
 
 	"github.com/robfig/cron/v3"
 )

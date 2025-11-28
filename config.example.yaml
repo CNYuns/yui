@@ -1,4 +1,4 @@
-# XPanel 配置文件示例
+# Y-UI 配置文件示例
 # 首次启动时会自动生成安全的 JWT 密钥
 
 server:
@@ -12,7 +12,7 @@ auth:
 
 database:
   driver: "sqlite"       # 数据库类型: sqlite/postgres
-  dsn: "xpanel.db"       # 数据库连接字符串
+  dsn: "y-ui.db"         # 数据库连接字符串
 
 xray:
   binary_path: "/usr/local/bin/xray"     # Xray 二进制路径
@@ -21,10 +21,10 @@ xray:
 
 tls:
   auto_acme: false       # 是否自动申请证书
-  cert_path: "/etc/xpanel/certs"  # 证书存储路径
+  cert_path: "/etc/y-ui/certs"  # 证书存储路径
   key_path: ""
   email: ""              # ACME 注册邮箱
 
 log:
   level: "info"          # 日志级别: debug/info/warn/error
-  output: "stdout"       # 日志输出: stdout/文件路径
+  output: "/var/log/y-ui/y-ui.log"  # 日志输出: stdout/文件路径

@@ -1,8 +1,8 @@
 package database
 
 import (
-	"xpanel/internal/config"
-	"xpanel/internal/models"
+	"y-ui/internal/config"
+	"y-ui/internal/models"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

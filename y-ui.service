@@ -1,0 +1,53 @@
+[Unit]
+Description=Y-UI - Xray Web Management Panel
+Documentation=https://github.com/CNYuns/Yun
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# 工作目录
+WorkingDirectory=/usr/local/y-ui
+
+# 启动命令
+ExecStart=/usr/local/y-ui/y-ui-server --config /usr/local/y-ui/config.yaml
+
+# 重启策略 - 保活
+Restart=on-failure
+RestartSec=5s
+RestartPreventExitStatus=23
+
+# 启动限制 - 防止无限重启
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# 进程限制
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# 资源限制
+MemoryMax=512M
+CPUQuota=80%
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/usr/local/y-ui /etc/xray /var/log/y-ui
+
+# 环境变量
+Environment=GIN_MODE=release
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=y-ui
+
+# 看门狗 - 自检
+WatchdogSec=30
+
+[Install]
+WantedBy=multi-user.target

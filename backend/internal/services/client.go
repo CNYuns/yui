@@ -4,9 +4,9 @@ import (
 	"errors"
 	"time"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
-	"xpanel/pkg/utils"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
+	"y-ui/pkg/utils"
 )
 
 type ClientService struct{}

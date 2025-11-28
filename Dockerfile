@@ -16,21 +16,28 @@ RUN go mod download
 COPY backend/ ./
 COPY --from=frontend-builder /app/backend/dist ./dist
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o /xpanel ./cmd/xpanel
+ARG VERSION=1.1.0
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X main.Version=${VERSION}" -o /y-ui-server ./cmd/y-ui
 
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates tzdata
 
-WORKDIR /app
+WORKDIR /usr/local/y-ui
 
-COPY --from=backend-builder /xpanel .
+COPY --from=backend-builder /y-ui-server .
 COPY config.example.yaml ./config.yaml
+
+RUN mkdir -p /var/log/y-ui /etc/xray
 
 EXPOSE 8080
 
-VOLUME ["/app/data", "/etc/xray"]
+VOLUME ["/usr/local/y-ui", "/etc/xray", "/var/log/y-ui"]
 
 ENV TZ=Asia/Shanghai
+ENV GIN_MODE=release
 
-CMD ["./xpanel", "--config", "config.yaml"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/v1/system/status || exit 1
+
+CMD ["./y-ui-server", "--config", "config.yaml"]

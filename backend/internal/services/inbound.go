@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
 )
 
 type InboundService struct{}

@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
 
 	"github.com/gin-gonic/gin"
 )

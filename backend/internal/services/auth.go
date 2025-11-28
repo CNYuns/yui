@@ -4,11 +4,11 @@ import (
 	"errors"
 	"time"
 
-	"xpanel/internal/config"
-	"xpanel/internal/database"
-	"xpanel/internal/middleware"
-	"xpanel/internal/models"
-	"xpanel/pkg/utils"
+	"y-ui/internal/config"
+	"y-ui/internal/database"
+	"y-ui/internal/middleware"
+	"y-ui/internal/models"
+	"y-ui/pkg/utils"
 )
 
 type AuthService struct{}

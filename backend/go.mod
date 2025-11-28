@@ -1,4 +1,4 @@
-module xpanel
+module y-ui
 
 go 1.22
 

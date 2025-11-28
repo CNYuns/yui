@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 
-	"xpanel/internal/database"
-	"xpanel/internal/models"
-	"xpanel/pkg/utils"
+	"y-ui/internal/database"
+	"y-ui/internal/models"
+	"y-ui/pkg/utils"
 )
 
 type UserService struct{}
