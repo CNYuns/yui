@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  xpanel:
+    build: .
+    container_name: xpanel
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml:ro
+      - /etc/xray:/etc/xray
+      - /usr/local/bin/xray:/usr/local/bin/xray:ro
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - xpanel-network
+
+networks:
+  xpanel-network:
+    driver: bridge

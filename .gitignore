@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs - only ignore binaries in root
+/xpanel
+/xpanel.exe
+/xpanel-*
+backend/dist/
+frontend/dist/
+
+# Database
+*.db
+*.db-journal
+
+# Config
+config.yaml
+
+# Certificates
+*.pem
+*.crt
+*.key
+certs/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+*.test
