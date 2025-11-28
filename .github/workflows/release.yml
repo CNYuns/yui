@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,13 +19,63 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install frontend dependencies
+      - name: Install dependencies
         working-directory: frontend
         run: npm install
 
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: backend/dist
+
+  build-backend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: ''
+            archive: tar.gz
+          - goos: linux
+            goarch: arm64
+            suffix: ''
+            archive: tar.gz
+          - goos: linux
+            goarch: arm
+            goarm: '7'
+            suffix: ''
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            suffix: '.exe'
+            archive: zip
+          - goos: windows
+            goarch: arm64
+            suffix: '.exe'
+            archive: zip
+          - goos: darwin
+            goarch: amd64
+            suffix: ''
+            archive: tar.gz
+          - goos: darwin
+            goarch: arm64
+            suffix: ''
+            archive: tar.gz
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: backend/dist
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -36,58 +86,68 @@ jobs:
         working-directory: backend
         run: go mod tidy
 
-      - name: Build and package
+      - name: Build binary
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: '0'
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          mkdir -p release
+          go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server${{ matrix.suffix }} ./cmd/y-ui
 
-          # 准备打包目录
+      - name: Prepare package
+        run: |
           mkdir -p package/dist
           cp -r backend/dist/* package/dist/
+          cp backend/y-ui-server${{ matrix.suffix }} package/
           cp config.example.yaml package/config.yaml
           cp install.sh package/
+          cp y-ui.service package/
 
-          # Linux amd64
-          cd backend && GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
-          tar -czvf release/y-ui-linux-amd64.tar.gz -C package .
-          rm package/y-ui-server
+      - name: Create tar.gz archive
+        if: matrix.archive == 'tar.gz'
+        run: |
+          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          tar -czvf $ARCHIVE_NAME -C package .
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
-          # Linux arm64
-          cd backend && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
-          tar -czvf release/y-ui-linux-arm64.tar.gz -C package .
-          rm package/y-ui-server
+      - name: Create zip archive
+        if: matrix.archive == 'zip'
+        run: |
+          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          cd package && zip -r ../$ARCHIVE_NAME .
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
-          # Linux arm
-          cd backend && GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
-          tar -czvf release/y-ui-linux-arm.tar.gz -C package .
-          rm package/y-ui-server
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: ${{ env.ARCHIVE_NAME }}
 
-          # Windows amd64
-          cd backend && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server.exe ./cmd/y-ui && cd ..
-          cd package && zip -r ../release/y-ui-windows-amd64.zip . && cd ..
-          rm package/y-ui-server.exe
+  release:
+    needs: build-backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-          # Windows arm64
-          cd backend && GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server.exe ./cmd/y-ui && cd ..
-          cd package && zip -r ../release/y-ui-windows-arm64.zip . && cd ..
-          rm package/y-ui-server.exe
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          pattern: y-ui-*
+          merge-multiple: true
 
-          # macOS amd64
-          cd backend && GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
-          tar -czvf release/y-ui-darwin-amd64.tar.gz -C package .
-          rm package/y-ui-server
+      - name: Copy install script
+        run: cp install.sh release/
 
-          # macOS arm64
-          cd backend && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.Version=$VERSION" -o ../package/y-ui-server ./cmd/y-ui && cd ..
-          tar -czvf release/y-ui-darwin-arm64.tar.gz -C package .
+      - name: Create checksums
+        working-directory: release
+        run: sha256sum * > checksums.txt
 
-          # 单独的安装脚本
-          cp install.sh release/
-
-          # 创建校验和
-          cd release && sha256sum * > checksums.txt
-
-          ls -la
+      - name: List release files
+        run: ls -la release/
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
