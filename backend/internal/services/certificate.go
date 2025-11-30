@@ -244,11 +244,22 @@ func (s *CertificateService) Delete(id uint) error {
 		return err
 	}
 
-	// 删除文件
-	os.Remove(cert.CertPath)
-	os.Remove(cert.KeyPath)
-	dir := filepath.Dir(cert.CertPath)
-	os.Remove(dir)
+	// 删除文件（忽略不存在的错误）
+	if cert.CertPath != "" {
+		if err := os.Remove(cert.CertPath); err != nil && !os.IsNotExist(err) {
+			// 记录错误但继续删除
+		}
+	}
+	if cert.KeyPath != "" {
+		if err := os.Remove(cert.KeyPath); err != nil && !os.IsNotExist(err) {
+			// 记录错误但继续删除
+		}
+	}
+	// 尝试删除目录（如果为空）
+	if cert.CertPath != "" {
+		dir := filepath.Dir(cert.CertPath)
+		os.Remove(dir) // 忽略错误，目录可能非空
+	}
 
 	return database.DB.Delete(cert).Error
 }

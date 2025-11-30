@@ -20,10 +20,10 @@ xray:
   assets_path: "/usr/local/share/xray"   # Xray 资源目录
 
 tls:
-  auto_acme: false       # 是否自动申请证书
-  cert_path: "/etc/y-ui/certs"  # 证书存储路径
-  key_path: ""
-  email: ""              # ACME 注册邮箱
+  auto_acme: false              # 是否自动申请证书 (需要配置 email)
+  cert_path: "/etc/y-ui/certs"  # 证书存储目录路径
+  # key_path: ""                # 私钥路径 (如为空则与证书同目录)
+  email: ""                     # ACME 注册邮箱 (auto_acme=true 时必填)
 
 log:
   level: "info"          # 日志级别: debug/info/warn/error

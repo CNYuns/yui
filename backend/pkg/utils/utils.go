@@ -28,7 +28,10 @@ func GenerateUUID() string {
 // GenerateRandomString 生成随机字符串
 func GenerateRandomString(length int) string {
 	bytes := make([]byte, length/2)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		// 如果加密随机数生成失败，使用时间戳作为备用方案
+		panic("crypto/rand 失败: " + err.Error())
+	}
 	return hex.EncodeToString(bytes)
 }
 

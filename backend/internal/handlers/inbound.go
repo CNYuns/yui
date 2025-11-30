@@ -24,8 +24,14 @@ func NewInboundHandler(xrayManager *xray.Manager) *InboundHandler {
 
 // List 获取入站列表
 func (h *InboundHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
 
 	inbounds, total, err := h.inboundService.List(page, pageSize)
 	if err != nil {
@@ -131,7 +137,11 @@ func (h *InboundHandler) Delete(c *gin.Context) {
 
 // AddClient 添加客户端到入站
 func (h *InboundHandler) AddClient(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的入站ID")
+		return
+	}
 
 	var req struct {
 		ClientID uint `json:"client_id" binding:"required"`
@@ -156,8 +166,16 @@ func (h *InboundHandler) AddClient(c *gin.Context) {
 
 // RemoveClient 从入站移除客户端
 func (h *InboundHandler) RemoveClient(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
-	clientID, _ := strconv.ParseUint(c.Param("client_id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的入站ID")
+		return
+	}
+	clientID, err := strconv.ParseUint(c.Param("client_id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的客户端ID")
+		return
+	}
 
 	if err := h.inboundService.RemoveClient(uint(id), uint(clientID)); err != nil {
 		response.Error(c, 4005, err.Error())
@@ -174,7 +192,11 @@ func (h *InboundHandler) RemoveClient(c *gin.Context) {
 
 // GetClients 获取入站的客户端列表
 func (h *InboundHandler) GetClients(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的入站ID")
+		return
+	}
 
 	clients, err := h.inboundService.GetClients(uint(id))
 	if err != nil {

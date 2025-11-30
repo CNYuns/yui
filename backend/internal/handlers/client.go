@@ -22,8 +22,14 @@ func NewClientHandler() *ClientHandler {
 
 // List 获取客户端列表
 func (h *ClientHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
 
 	// 非管理员只能看到自己创建的
 	var createdByID uint

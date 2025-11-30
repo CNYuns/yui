@@ -1,22 +1,23 @@
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json ./
+RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
 FROM golang:1.22-alpine AS backend-builder
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app/backend
-COPY backend/go.mod backend/go.sum ./
-RUN go mod download
+COPY backend/go.mod ./
+RUN go mod download || true
 COPY backend/ ./
-COPY --from=frontend-builder /app/backend/dist ./dist
+RUN go mod tidy
+COPY --from=frontend-builder /app/frontend/dist ./dist
 
-ARG VERSION=1.1.3
+ARG VERSION=1.1.8
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X main.Version=${VERSION}" -o /y-ui-server ./cmd/y-ui
 
 FROM alpine:latest

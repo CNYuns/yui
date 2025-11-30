@@ -2,8 +2,8 @@ package scheduler
 
 import (
 	"sync"
-	"time"
 
+	"y-ui/internal/models"
 	"y-ui/internal/services"
 	"y-ui/internal/xray"
 
@@ -71,13 +71,21 @@ func (s *Scheduler) checkQuota() {
 	defer s.mu.Unlock()
 
 	// 检查过期的客户端
-	expiredClients, _ := s.clientService.GetExpiredClients()
+	expiredClients, err := s.clientService.GetExpiredClients()
+	if err != nil {
+		// 记录错误但继续执行
+		expiredClients = []models.Client{}
+	}
 	for _, client := range expiredClients {
 		s.clientService.DisableClient(client.ID)
 	}
 
 	// 检查超量的客户端
-	overQuotaClients, _ := s.clientService.GetOverQuotaClients()
+	overQuotaClients, err := s.clientService.GetOverQuotaClients()
+	if err != nil {
+		// 记录错误但继续执行
+		overQuotaClients = []models.Client{}
+	}
 	for _, client := range overQuotaClients {
 		s.clientService.DisableClient(client.ID)
 	}
@@ -96,7 +104,11 @@ func (s *Scheduler) renewCertificates() {
 	defer s.mu.Unlock()
 
 	// 获取需要续签的证书（30天内过期）
-	certs, _ := s.certService.GetExpiringCertificates(30)
+	certs, err := s.certService.GetExpiringCertificates(30)
+	if err != nil {
+		// 记录错误但继续执行
+		certs = []models.Certificate{}
+	}
 	for _, cert := range certs {
 		if cert.AutoRenew {
 			s.certService.Renew(cert.ID)
@@ -111,8 +123,7 @@ func (s *Scheduler) backupDatabase() {
 
 	// 数据库备份逻辑
 	// 对于 SQLite，可以直接复制文件
-	timestamp := time.Now().Format("20060102_150405")
-	_ = timestamp // TODO: 实现备份逻辑
+	// TODO: 实现备份逻辑
 }
 
 // cleanup 清理旧数据

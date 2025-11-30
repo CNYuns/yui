@@ -282,7 +282,10 @@ func (m *Manager) generateConfig() error {
 
 	// 从数据库加载入站配置
 	var inbounds []models.Inbound
-	database.DB.Where("enable = ?", true).Find(&inbounds)
+	if err := database.DB.Where("enable = ?", true).Find(&inbounds).Error; err != nil {
+		// 数据库查询失败，使用空切片继续
+		inbounds = []models.Inbound{}
+	}
 
 	for _, ib := range inbounds {
 		inboundConfig := InboundConfig{
@@ -293,7 +296,11 @@ func (m *Manager) generateConfig() error {
 		}
 
 		// 获取此入站的所有客户端
-		clients, _ := m.getInboundClients(ib.ID)
+		clients, err := m.getInboundClients(ib.ID)
+		if err != nil {
+			// 如果获取客户端失败，使用空切片继续
+			clients = []models.Client{}
+		}
 		settings := m.buildInboundSettings(ib.Protocol, clients)
 		inboundConfig.Settings = settings
 
@@ -309,7 +316,10 @@ func (m *Manager) generateConfig() error {
 
 	// 从数据库加载出站配置
 	var outbounds []models.Outbound
-	database.DB.Where("enable = ?", true).Find(&outbounds)
+	if err := database.DB.Where("enable = ?", true).Find(&outbounds).Error; err != nil {
+		// 数据库查询失败，使用空切片继续
+		outbounds = []models.Outbound{}
+	}
 
 	for _, ob := range outbounds {
 		outboundConfig := OutboundConfig{
@@ -399,7 +409,10 @@ func (m *Manager) buildVMessSettings(clients []models.Client) json.RawMessage {
 		"clients": vmessClients,
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"clients":[]}`)
+	}
 	return data
 }
 
@@ -423,7 +436,10 @@ func (m *Manager) buildVLESSSettings(clients []models.Client) json.RawMessage {
 		"decryption": "none",
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"clients":[],"decryption":"none"}`)
+	}
 	return data
 }
 
@@ -445,7 +461,10 @@ func (m *Manager) buildTrojanSettings(clients []models.Client) json.RawMessage {
 		"clients": trojanClients,
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"clients":[]}`)
+	}
 	return data
 }
 
@@ -462,7 +481,10 @@ func (m *Manager) buildShadowsocksSettings(clients []models.Client) json.RawMess
 		"network":  "tcp,udp",
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"method":"aes-256-gcm","password":"","network":"tcp,udp"}`)
+	}
 	return data
 }
 
@@ -494,7 +516,10 @@ func (m *Manager) buildSocksSettings(clients []models.Client) json.RawMessage {
 		delete(settings, "accounts")
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"auth":"noauth","udp":true}`)
+	}
 	return data
 }
 
@@ -522,7 +547,10 @@ func (m *Manager) buildHTTPSettings(clients []models.Client) json.RawMessage {
 		settings["accounts"] = accounts
 	}
 
-	data, _ := json.Marshal(settings)
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"timeout":300,"allowTransparent":false}`)
+	}
 	return data
 }
 

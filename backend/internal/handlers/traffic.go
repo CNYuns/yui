@@ -32,7 +32,11 @@ func (h *TrafficHandler) GetSummary(c *gin.Context) {
 
 // GetClientTraffic 获取客户端流量
 func (h *TrafficHandler) GetClientTraffic(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的客户端ID")
+		return
+	}
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
 
@@ -47,7 +51,11 @@ func (h *TrafficHandler) GetClientTraffic(c *gin.Context) {
 
 // GetInboundTraffic 获取入站流量
 func (h *TrafficHandler) GetInboundTraffic(c *gin.Context) {
-	id, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.BadRequest(c, "无效的入站ID")
+		return
+	}
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
 
@@ -62,7 +70,10 @@ func (h *TrafficHandler) GetInboundTraffic(c *gin.Context) {
 
 // GetDailyStats 获取每日统计
 func (h *TrafficHandler) GetDailyStats(c *gin.Context) {
-	days, _ := strconv.Atoi(c.DefaultQuery("days", "30"))
+	days, err := strconv.Atoi(c.DefaultQuery("days", "30"))
+	if err != nil || days < 1 || days > 365 {
+		days = 30
+	}
 
 	stats, err := h.trafficService.GetDailyStats(days)
 	if err != nil {

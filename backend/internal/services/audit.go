@@ -1,6 +1,8 @@
 package services
 
 import (
+	"fmt"
+
 	"y-ui/internal/database"
 	"y-ui/internal/models"
 )
@@ -62,5 +64,5 @@ func (s *AuditService) LogAction(userID uint, action, resource string, resourceI
 // CleanOldLogs 清理旧日志
 func (s *AuditService) CleanOldLogs(days int) error {
 	return database.DB.Exec("DELETE FROM audit_logs WHERE created_at < datetime('now', ?)",
-		"-"+string(rune(days))+" days").Error
+		fmt.Sprintf("-%d days", days)).Error
 }

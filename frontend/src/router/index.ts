@@ -37,7 +37,7 @@ const router = createRouter({
           path: 'certificates',
           name: 'Certificates',
           component: () => import('@/views/Certificates.vue'),
-          meta: { title: '证书管理' }
+          meta: { title: '证书管理', requiresAdmin: true }
         },
         {
           path: 'traffic',
@@ -49,15 +49,20 @@ const router = createRouter({
           path: 'settings',
           name: 'Settings',
           component: () => import('@/views/Settings.vue'),
-          meta: { title: '系统设置' }
+          meta: { title: '系统设置', requiresAdmin: true }
         },
         {
           path: 'audit',
           name: 'Audit',
           component: () => import('@/views/Audit.vue'),
-          meta: { title: '审计日志' }
+          meta: { title: '审计日志', requiresAdmin: true }
         }
       ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      redirect: '/dashboard'
     }
   ]
 })
@@ -66,13 +71,21 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const userStore = useUserStore()
 
+  // 不需要认证的路由
   if (to.meta.requiresAuth === false) {
     next()
     return
   }
 
+  // 需要认证但未登录
   if (!userStore.token) {
     next('/login')
+    return
+  }
+
+  // 需要管理员权限
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    next('/dashboard')
     return
   }
 

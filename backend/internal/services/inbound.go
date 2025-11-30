@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"y-ui/internal/database"
 	"y-ui/internal/models"
@@ -91,9 +92,18 @@ func (s *InboundService) Create(req *CreateInboundRequest) (*models.Inbound, err
 		listen = "0.0.0.0"
 	}
 
-	settingsJSON, _ := json.Marshal(req.Settings)
-	streamJSON, _ := json.Marshal(req.StreamSettings)
-	sniffingJSON, _ := json.Marshal(req.Sniffing)
+	settingsJSON, err := json.Marshal(req.Settings)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 Settings 失败: %v", err)
+	}
+	streamJSON, err := json.Marshal(req.StreamSettings)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 StreamSettings 失败: %v", err)
+	}
+	sniffingJSON, err := json.Marshal(req.Sniffing)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 Sniffing 失败: %v", err)
+	}
 
 	inbound := models.Inbound{
 		Tag:            req.Tag,
@@ -148,15 +158,24 @@ func (s *InboundService) Update(id uint, req *UpdateInboundRequest) (*models.Inb
 		updates["listen"] = req.Listen
 	}
 	if req.Settings != nil {
-		settingsJSON, _ := json.Marshal(req.Settings)
+		settingsJSON, err := json.Marshal(req.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 Settings 失败: %v", err)
+		}
 		updates["settings"] = string(settingsJSON)
 	}
 	if req.StreamSettings != nil {
-		streamJSON, _ := json.Marshal(req.StreamSettings)
+		streamJSON, err := json.Marshal(req.StreamSettings)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 StreamSettings 失败: %v", err)
+		}
 		updates["stream_settings"] = string(streamJSON)
 	}
 	if req.Sniffing != nil {
-		sniffingJSON, _ := json.Marshal(req.Sniffing)
+		sniffingJSON, err := json.Marshal(req.Sniffing)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 Sniffing 失败: %v", err)
+		}
 		updates["sniffing"] = string(sniffingJSON)
 	}
 	if req.Enable != nil {

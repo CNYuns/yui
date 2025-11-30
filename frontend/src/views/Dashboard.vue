@@ -80,12 +80,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
 import * as echarts from 'echarts'
 import api from '@/api'
 
 const chartRef = ref<HTMLElement>()
-let chart: echarts.ECharts
+let chart: echarts.ECharts | null = null
 
 const stats = reactive({
   totalClients: 0,
@@ -114,6 +114,13 @@ const cpuUsage = computed(() => {
 
 onMounted(async () => {
   await Promise.all([fetchStats(), fetchSystemStatus(), fetchDailyStats()])
+})
+
+onBeforeUnmount(() => {
+  if (chart) {
+    chart.dispose()
+    chart = null
+  }
 })
 
 async function fetchStats() {

@@ -9,32 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm install
-
-      - name: Build frontend
-        working-directory: frontend
-        run: npm run build
-
-      - name: Upload frontend dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: backend/dist
-
-  build-backend:
-    needs: build-frontend
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -42,51 +17,53 @@ jobs:
           - goos: linux
             goarch: amd64
             suffix: ''
-            archive: tar.gz
           - goos: linux
             goarch: arm64
             suffix: ''
-            archive: tar.gz
           - goos: linux
             goarch: arm
             goarm: '7'
             suffix: ''
-            archive: tar.gz
           - goos: windows
             goarch: amd64
             suffix: '.exe'
-            archive: zip
           - goos: windows
             goarch: arm64
             suffix: '.exe'
-            archive: zip
           - goos: darwin
             goarch: amd64
             suffix: ''
-            archive: tar.gz
           - goos: darwin
             goarch: arm64
             suffix: ''
-            archive: tar.gz
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Download frontend dist
-        uses: actions/download-artifact@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: frontend-dist
-          path: backend/dist
+          node-version: '20'
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
       - name: Download Go dependencies
         working-directory: backend
         run: go mod tidy
 
-      - name: Build binary
+      - name: Build backend
         working-directory: backend
         env:
           GOOS: ${{ matrix.goos }}
@@ -100,21 +77,22 @@ jobs:
       - name: Prepare package
         run: |
           mkdir -p package/dist
-          cp -r backend/dist/* package/dist/
+          cp -r frontend/dist/* package/dist/
           cp backend/y-ui-server${{ matrix.suffix }} package/
           cp config.example.yaml package/config.yaml
           cp install.sh package/
           cp y-ui.service package/
+          ls -la package/
 
-      - name: Create tar.gz archive
-        if: matrix.archive == 'tar.gz'
+      - name: Create archive (tar.gz)
+        if: matrix.goos != 'windows'
         run: |
           ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
           tar -czvf $ARCHIVE_NAME -C package .
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
-      - name: Create zip archive
-        if: matrix.archive == 'zip'
+      - name: Create archive (zip)
+        if: matrix.goos == 'windows'
         run: |
           ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
           cd package && zip -r ../$ARCHIVE_NAME .
@@ -125,40 +103,44 @@ jobs:
         with:
           name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
           path: ${{ env.ARCHIVE_NAME }}
+          retention-days: 1
 
   release:
-    needs: build-backend
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: release
-          pattern: y-ui-*
-          merge-multiple: true
+          path: artifacts
 
-      - name: Copy install script
-        run: cp install.sh release/
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+          cp install.sh release/
+          ls -la release/
 
       - name: Create checksums
         working-directory: release
-        run: sha256sum * > checksums.txt
-
-      - name: List release files
-        run: ls -la release/
+        run: |
+          sha256sum *.tar.gz *.zip 2>/dev/null > checksums.txt || true
+          cat checksums.txt
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: release/*
+          generate_release_notes: false
           body: |
             ## Y-UI ${{ github.ref_name }}
 
-            基于 Xray-core 的 Web 管理面板
+            Xray-core Web 管理面板
 
-            ### 一键安装 (推荐)
+            ### 一键安装
 
             ```bash
             bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
@@ -170,7 +152,7 @@ jobs:
             2. 解压到 `/usr/local/y-ui/`
             3. 运行 `./y-ui-server --config config.yaml`
 
-            ### 下载
+            ### 支持平台
 
             | 平台 | 架构 | 文件 |
             |------|------|------|
@@ -191,14 +173,6 @@ jobs:
             y-ui restart      # 重启
             y-ui status       # 状态
             y-ui log          # 日志
-            y-ui update       # 更新
-            y-ui uninstall    # 卸载
             ```
-
-            ### 支持协议
-
-            VMess, VLESS, Trojan, Shadowsocks, SOCKS5, HTTP/HTTPS
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

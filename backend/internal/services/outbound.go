@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"y-ui/internal/database"
 	"y-ui/internal/models"
@@ -68,10 +69,22 @@ func (s *OutboundService) Create(req *CreateOutboundRequest) (*models.Outbound, 
 		return nil, errors.New("Tag 已存在")
 	}
 
-	settingsJSON, _ := json.Marshal(req.Settings)
-	streamJSON, _ := json.Marshal(req.StreamSettings)
-	proxyJSON, _ := json.Marshal(req.ProxySettings)
-	muxJSON, _ := json.Marshal(req.Mux)
+	settingsJSON, err := json.Marshal(req.Settings)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 Settings 失败: %v", err)
+	}
+	streamJSON, err := json.Marshal(req.StreamSettings)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 StreamSettings 失败: %v", err)
+	}
+	proxyJSON, err := json.Marshal(req.ProxySettings)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 ProxySettings 失败: %v", err)
+	}
+	muxJSON, err := json.Marshal(req.Mux)
+	if err != nil {
+		return nil, fmt.Errorf("序列化 Mux 失败: %v", err)
+	}
 
 	outbound := models.Outbound{
 		Tag:            req.Tag,
@@ -113,19 +126,31 @@ func (s *OutboundService) Update(id uint, req *UpdateOutboundRequest) (*models.O
 		updates["protocol"] = req.Protocol
 	}
 	if req.Settings != nil {
-		settingsJSON, _ := json.Marshal(req.Settings)
+		settingsJSON, err := json.Marshal(req.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 Settings 失败: %v", err)
+		}
 		updates["settings"] = string(settingsJSON)
 	}
 	if req.StreamSettings != nil {
-		streamJSON, _ := json.Marshal(req.StreamSettings)
+		streamJSON, err := json.Marshal(req.StreamSettings)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 StreamSettings 失败: %v", err)
+		}
 		updates["stream_settings"] = string(streamJSON)
 	}
 	if req.ProxySettings != nil {
-		proxyJSON, _ := json.Marshal(req.ProxySettings)
+		proxyJSON, err := json.Marshal(req.ProxySettings)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 ProxySettings 失败: %v", err)
+		}
 		updates["proxy_settings"] = string(proxyJSON)
 	}
 	if req.Mux != nil {
-		muxJSON, _ := json.Marshal(req.Mux)
+		muxJSON, err := json.Marshal(req.Mux)
+		if err != nil {
+			return nil, fmt.Errorf("序列化 Mux 失败: %v", err)
+		}
 		updates["mux"] = string(muxJSON)
 	}
 	if req.Enable != nil {

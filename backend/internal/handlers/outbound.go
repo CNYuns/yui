@@ -24,8 +24,14 @@ func NewOutboundHandler(xrayManager *xray.Manager) *OutboundHandler {
 
 // List 获取出站列表
 func (h *OutboundHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if err != nil || pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
 
 	outbounds, total, err := h.outboundService.List(page, pageSize)
 	if err != nil {
