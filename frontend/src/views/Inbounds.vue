@@ -46,7 +46,7 @@
     </el-card>
 
     <!-- 编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑入站' : '新建���站'" width="600px">
+    <el-dialog v-model="dialogVisible" :title="form.id ? '编辑入站' : '新建入站'" width="600px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="标签" prop="tag">
           <el-input v-model="form.tag" placeholder="唯一标识" />

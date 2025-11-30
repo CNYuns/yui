@@ -12,30 +12,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - goos: linux
             goarch: amd64
-            suffix: ''
           - goos: linux
             goarch: arm64
-            suffix: ''
           - goos: linux
             goarch: arm
             goarm: '7'
-            suffix: ''
           - goos: windows
             goarch: amd64
-            suffix: '.exe'
           - goos: windows
             goarch: arm64
-            suffix: '.exe'
           - goos: darwin
             goarch: amd64
-            suffix: ''
           - goos: darwin
             goarch: arm64
-            suffix: ''
 
     steps:
       - name: Checkout
@@ -51,17 +45,11 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm install
-
       - name: Build frontend
         working-directory: frontend
-        run: npm run build
-
-      - name: Download Go dependencies
-        working-directory: backend
-        run: go mod tidy
+        run: |
+          npm install
+          npm run build
 
       - name: Build backend
         working-directory: backend
@@ -71,38 +59,47 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: '0'
         run: |
+          go mod tidy
           VERSION=${GITHUB_REF#refs/tags/}
-          go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server${{ matrix.suffix }} ./cmd/y-ui
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server.exe ./cmd/y-ui
+          else
+            go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server ./cmd/y-ui
+          fi
 
       - name: Prepare package
         run: |
           mkdir -p package/dist
           cp -r frontend/dist/* package/dist/
-          cp backend/y-ui-server${{ matrix.suffix }} package/
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cp backend/y-ui-server.exe package/
+          else
+            cp backend/y-ui-server package/
+          fi
           cp config.example.yaml package/config.yaml
           cp install.sh package/
           cp y-ui.service package/
+          echo "Package contents:"
           ls -la package/
 
-      - name: Create archive (tar.gz)
-        if: matrix.goos != 'windows'
+      - name: Create archive
         run: |
-          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
-          tar -czvf $ARCHIVE_NAME -C package .
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
-
-      - name: Create archive (zip)
-        if: matrix.goos == 'windows'
-        run: |
-          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-          cd package && zip -r ../$ARCHIVE_NAME .
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            ARCHIVE=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+            cd package && zip -r ../$ARCHIVE .
+          else
+            ARCHIVE=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            tar -czvf $ARCHIVE -C package .
+          fi
+          echo "Created archive: $ARCHIVE"
+          ls -la *.tar.gz *.zip 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: ${{ env.ARCHIVE_NAME }}
+          path: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.*
+          if-no-files-found: error
           retention-days: 1
 
   release:
@@ -116,18 +113,28 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: false
+
+      - name: List artifacts
+        run: |
+          echo "Artifacts directory structure:"
+          find artifacts -type f -ls
 
       - name: Prepare release files
         run: |
           mkdir -p release
+          # Copy all archive files
           find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+          # Copy install script
           cp install.sh release/
+          echo "Release files:"
           ls -la release/
 
       - name: Create checksums
         working-directory: release
         run: |
-          sha256sum *.tar.gz *.zip 2>/dev/null > checksums.txt || true
+          sha256sum * > checksums.txt
+          echo "Checksums:"
           cat checksums.txt
 
       - name: Create Release

@@ -21,7 +21,7 @@
 
           <el-menu-item index="/inbounds">
             <el-icon><Connection /></el-icon>
-            <span>入站���理</span>
+            <span>入站管理</span>
           </el-menu-item>
 
           <el-menu-item index="/clients">

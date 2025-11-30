@@ -272,7 +272,7 @@ func (s *CertificateService) GetExpiringCertificates(days int) ([]models.Certifi
 	return certs, err
 }
 
-// UpdateAutoRenew 更新自动续���设置
+// UpdateAutoRenew 更新自动续签设置
 func (s *CertificateService) UpdateAutoRenew(id uint, autoRenew bool) error {
 	return database.DB.Model(&models.Certificate{}).Where("id = ?", id).Update("auto_renew", autoRenew).Error
 }

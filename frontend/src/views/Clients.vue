@@ -167,7 +167,7 @@ async function handleSubmit() {
 }
 
 async function handleDelete(row: any) {
-  await ElMessageBox.confirm('确定要删除���用户吗？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm('确定要删除该用户吗？', '提示', { type: 'warning' })
   try {
     await api.clients.delete(row.id)
     ElMessage.success('删除成功')
