@@ -84,9 +84,9 @@ install_deps() {
 
 # 获取最新版本
 get_latest_version() {
-    local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-    if [[ -z "$latest" ]]; then
-        echo "v1.2.1"
+    local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | cut -d'"' -f4)
+    if [[ -z "$latest" || ! "$latest" =~ ^v[0-9] ]]; then
+        echo "v1.2.2"
     else
         echo "$latest"
     fi
@@ -193,7 +193,7 @@ SERVICE_NAME="y-ui"
 show_menu() {
     clear
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}       Y-UI 管理面板 v1.2.1${NC}"
+    echo -e "${GREEN}       Y-UI 管理面板 v1.2.2${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "${CYAN}--- 服务管理 ---${NC}"

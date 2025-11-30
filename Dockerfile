@@ -17,7 +17,7 @@ COPY backend/ ./
 RUN go mod tidy
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
-ARG VERSION=1.2.1
+ARG VERSION=1.2.2
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X main.Version=${VERSION}" -o /y-ui-server ./cmd/y-ui
 
 FROM alpine:latest
