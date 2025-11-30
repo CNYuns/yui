@@ -66,6 +66,7 @@ jobs:
           else
             go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server ./cmd/y-ui
           fi
+          ls -la
 
       - name: Prepare package
         run: |
@@ -84,22 +85,23 @@ jobs:
 
       - name: Create archive
         run: |
+          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            ARCHIVE=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-            cd package && zip -r ../$ARCHIVE .
+            cd package && zip -r ../${ARCHIVE_NAME}.zip .
+            cd .. && ls -la ${ARCHIVE_NAME}.zip
           else
-            ARCHIVE=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
-            tar -czvf $ARCHIVE -C package .
+            tar -czvf ${ARCHIVE_NAME}.tar.gz -C package .
+            ls -la ${ARCHIVE_NAME}.tar.gz
           fi
-          echo "Created archive: $ARCHIVE"
-          ls -la *.tar.gz *.zip 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.*
-          if-no-files-found: error
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          if-no-files-found: warn
           retention-days: 1
 
   release:
@@ -109,23 +111,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download Linux amd64
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          merge-multiple: false
+          name: linux-amd64
+          path: release
+        continue-on-error: true
 
-      - name: List artifacts
-        run: |
-          echo "Artifacts directory structure:"
-          find artifacts -type f -ls
+      - name: Download Linux arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: release
+        continue-on-error: true
 
-      - name: Prepare release files
+      - name: Download Linux arm
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm
+          path: release
+        continue-on-error: true
+
+      - name: Download Windows amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64
+          path: release
+        continue-on-error: true
+
+      - name: Download Windows arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-arm64
+          path: release
+        continue-on-error: true
+
+      - name: Download Darwin amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-amd64
+          path: release
+        continue-on-error: true
+
+      - name: Download Darwin arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-arm64
+          path: release
+        continue-on-error: true
+
+      - name: Prepare release
         run: |
-          mkdir -p release
-          # Copy all archive files
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
-          # Copy install script
           cp install.sh release/
           echo "Release files:"
           ls -la release/
@@ -133,8 +169,7 @@ jobs:
       - name: Create checksums
         working-directory: release
         run: |
-          sha256sum * > checksums.txt
-          echo "Checksums:"
+          sha256sum *.tar.gz *.zip 2>/dev/null > checksums.txt || true
           cat checksums.txt
 
       - name: Create Release
@@ -170,16 +205,5 @@ jobs:
             | Windows | arm64 | y-ui-windows-arm64.zip |
             | macOS | amd64 | y-ui-darwin-amd64.tar.gz |
             | macOS | arm64 | y-ui-darwin-arm64.tar.gz |
-
-            ### 管理命令
-
-            ```bash
-            y-ui              # 交互式菜单
-            y-ui start        # 启动
-            y-ui stop         # 停止
-            y-ui restart      # 重启
-            y-ui status       # 状态
-            y-ui log          # 日志
-            ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
