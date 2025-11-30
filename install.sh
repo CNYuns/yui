@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 INSTALL_DIR="/usr/local/y-ui"
 SERVICE_NAME="y-ui"
 GITHUB_REPO="CNYuns/Yun"
-VERSION="${1:-latest}"
+YUI_VERSION="${1:-latest}"
 
 # 检测系统架构
 get_arch() {
@@ -86,7 +86,7 @@ install_deps() {
 get_latest_version() {
     local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | cut -d'"' -f4)
     if [[ -z "$latest" || ! "$latest" =~ ^v[0-9] ]]; then
-        echo "v1.2.2"
+        echo "v1.2.3"
     else
         echo "$latest"
     fi
@@ -112,7 +112,7 @@ download() {
 # 安装 Y-UI
 install_yui() {
     local arch=$(get_arch)
-    local version=$VERSION
+    local version=$YUI_VERSION
 
     if [[ "$version" == "latest" ]]; then
         version=$(get_latest_version)
@@ -193,7 +193,7 @@ SERVICE_NAME="y-ui"
 show_menu() {
     clear
     echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}       Y-UI 管理面板 v1.2.2${NC}"
+    echo -e "${GREEN}       Y-UI 管理面板 v1.2.3${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
     echo -e "${CYAN}--- 服务管理 ---${NC}"
