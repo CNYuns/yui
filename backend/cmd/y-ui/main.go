@@ -23,7 +23,7 @@ import (
 
 var (
 	configPath = flag.String("config", "config.yaml", "配置文件路径")
-	Version    = "1.3.1" // 通过 -ldflags 注入
+	Version    = "1.3.2" // 通过 -ldflags 注入
 )
 
 func main() {
@@ -56,7 +56,7 @@ func main() {
 	xrayManager := xray.NewManager(&cfg.Xray)
 
 	// 初始化调度器
-	sched := scheduler.NewScheduler(xrayManager)
+	sched := scheduler.NewScheduler(xrayManager, cfg.Database.Path)
 	sched.Start()
 	defer sched.Stop()
 
