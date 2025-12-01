@@ -1,6 +1,13 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
+	"net"
+	"net/http"
+	"strconv"
+	"time"
+
 	"y-ui/internal/services"
 	"y-ui/internal/xray"
 	"y-ui/pkg/response"
@@ -81,4 +88,114 @@ func (h *SystemHandler) GetXrayConfig(c *gin.Context) {
 	}
 
 	response.Success(c, config)
+}
+
+// CheckPort 检查端口是否被占用
+func (h *SystemHandler) CheckPort(c *gin.Context) {
+	portStr := c.Query("port")
+	if portStr == "" {
+		response.BadRequest(c, "端口参数缺失")
+		return
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil || port < 1 || port > 65535 {
+		response.BadRequest(c, "无效的端口号")
+		return
+	}
+
+	// 检查 TCP 端口
+	tcpInUse := isPortInUse("tcp", port)
+	// 检查 UDP 端口
+	udpInUse := isPortInUse("udp", port)
+
+	response.Success(c, gin.H{
+		"port":       port,
+		"tcp_in_use": tcpInUse,
+		"udp_in_use": udpInUse,
+		"available":  !tcpInUse && !udpInUse,
+	})
+}
+
+// isPortInUse 检查端口是否被占用
+func isPortInUse(protocol string, port int) bool {
+	address := fmt.Sprintf(":%d", port)
+
+	if protocol == "tcp" {
+		listener, err := net.Listen("tcp", address)
+		if err != nil {
+			return true
+		}
+		listener.Close()
+		return false
+	}
+
+	// UDP
+	conn, err := net.ListenPacket("udp", address)
+	if err != nil {
+		return true
+	}
+	conn.Close()
+	return false
+}
+
+// CheckUpdate 检查 GitHub 版本更新
+func (h *SystemHandler) CheckUpdate(c *gin.Context) {
+	// 当前版本
+	currentVersion := "1.3.5"
+
+	// 从 GitHub API 获取最新版本
+	latestVersion, releaseURL, err := getLatestVersion()
+	if err != nil {
+		response.Error(c, 6005, "检查更新失败: "+err.Error())
+		return
+	}
+
+	// 比较版本
+	hasUpdate := compareVersions(latestVersion, currentVersion)
+
+	response.Success(c, gin.H{
+		"current_version": currentVersion,
+		"latest_version":  latestVersion,
+		"has_update":      hasUpdate,
+		"release_url":     releaseURL,
+	})
+}
+
+// getLatestVersion 从 GitHub 获取最新版本
+func getLatestVersion() (string, string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	resp, err := client.Get("https://api.github.com/repos/CNYuns/yui/releases/latest")
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", "", fmt.Errorf("GitHub API 返回状态码: %d", resp.StatusCode)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		HTMLURL string `json:"html_url"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", "", err
+	}
+
+	// 去掉 v 前缀
+	version := release.TagName
+	if len(version) > 0 && version[0] == 'v' {
+		version = version[1:]
+	}
+
+	return version, release.HTMLURL, nil
+}
+
+// compareVersions 比较版本号，返回 true 表示有更新
+func compareVersions(latest, current string) bool {
+	// 简单的版本比较
+	return latest > current
 }

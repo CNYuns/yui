@@ -14,8 +14,8 @@ import (
 type AuthService struct{}
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type LoginResponse struct {
@@ -31,7 +31,7 @@ func NewAuthService() *AuthService {
 // Login 用户登录
 func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 	var user models.User
-	if err := database.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		return nil, errors.New("用户不存在")
 	}
 
@@ -44,7 +44,7 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 	}
 
 	// 生成 Token
-	token, err := middleware.GenerateToken(user.ID, user.Email, user.Role)
+	token, err := middleware.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
 		return nil, errors.New("生成Token失败")
 	}
@@ -61,7 +61,7 @@ func (s *AuthService) Login(req *LoginRequest) (*LoginResponse, error) {
 }
 
 // CreateInitAdmin 创建初始管理员
-func (s *AuthService) CreateInitAdmin(email, password string) error {
+func (s *AuthService) CreateInitAdmin(username, password string) error {
 	var count int64
 	database.DB.Model(&models.User{}).Count(&count)
 	if count > 0 {
@@ -74,10 +74,10 @@ func (s *AuthService) CreateInitAdmin(email, password string) error {
 	}
 
 	user := models.User{
-		Email:    email,
+		Username: username,
 		Password: hashedPassword,
 		Role:     middleware.RoleAdmin,
-		Nickname: "Admin",
+		Nickname: username,
 		Status:   1,
 	}
 

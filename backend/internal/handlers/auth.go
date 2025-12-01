@@ -6,6 +6,7 @@ import (
 	"y-ui/internal/models"
 	"y-ui/internal/services"
 	"y-ui/pkg/response"
+	"y-ui/pkg/validator"
 
 	"github.com/gin-gonic/gin"
 )
@@ -61,11 +62,17 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req struct {
 		OldPassword string `json:"old_password" binding:"required"`
-		NewPassword string `json:"new_password" binding:"required,min=6"`
+		NewPassword string `json:"new_password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+
+	// 验证新密码
+	if err := validator.ValidatePassword(req.NewPassword); err != nil {
+		response.BadRequest(c, err.Error())
 		return
 	}
 
@@ -81,8 +88,8 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 // InitAdmin 初始化管理员 (仅在无管理员时可用)
 func (h *AuthHandler) InitAdmin(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=6"`
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -90,7 +97,19 @@ func (h *AuthHandler) InitAdmin(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.CreateInitAdmin(req.Email, req.Password); err != nil {
+	// 验证用户名
+	if err := validator.ValidateUsername(req.Username); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// 验证密码
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	if err := h.authService.CreateInitAdmin(req.Username, req.Password); err != nil {
 		response.Error(c, 1004, err.Error())
 		return
 	}

@@ -16,8 +16,8 @@
       />
 
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleInit">
-        <el-form-item prop="email">
-          <el-input v-model="form.email" placeholder="管理员邮箱" size="large" prefix-icon="Message" />
+        <el-form-item prop="username">
+          <el-input v-model="form.username" placeholder="用户名（字母和数字，至少2位）" size="large" prefix-icon="User" />
         </el-form-item>
 
         <el-form-item prop="password">
@@ -48,6 +48,15 @@
           </el-button>
         </el-form-item>
       </el-form>
+
+      <div class="password-tips">
+        <p>密码要求：</p>
+        <ul>
+          <li>至少6个字符</li>
+          <li>不能包含连续相同字符（如aaa）</li>
+          <li>不能是连续字符（如abc、123）</li>
+        </ul>
+      </div>
     </div>
   </div>
 </template>
@@ -63,10 +72,39 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 
 const form = reactive({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: '',
 })
+
+// 用户名验证：只允许字母和数字
+const validateUsername = (_rule: any, value: string, callback: any) => {
+  if (!/^[a-zA-Z0-9]+$/.test(value)) {
+    callback(new Error('用户名只能包含字母和数字'))
+  } else {
+    callback()
+  }
+}
+
+// 密码验证
+const validatePassword = (_rule: any, value: string, callback: any) => {
+  // 检查连续相同字符
+  if (/(.)\1\1/.test(value)) {
+    callback(new Error('密码不能包含3个连续相同的字符'))
+    return
+  }
+  // 检查连续递增/递减字符
+  for (let i = 0; i < value.length - 2; i++) {
+    const c1 = value.charCodeAt(i)
+    const c2 = value.charCodeAt(i + 1)
+    const c3 = value.charCodeAt(i + 2)
+    if ((c2 === c1 + 1 && c3 === c2 + 1) || (c2 === c1 - 1 && c3 === c2 - 1)) {
+      callback(new Error('密码不能包含连续字符（如abc、321）'))
+      return
+    }
+  }
+  callback()
+}
 
 const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
   if (value !== form.password) {
@@ -77,13 +115,15 @@ const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
 }
 
 const rules: FormRules = {
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 32, message: '用户名长度为2-32个字符', trigger: 'blur' },
+    { validator: validateUsername, trigger: 'blur' },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+    { min: 6, max: 64, message: '密码长度为6-64个字符', trigger: 'blur' },
+    { validator: validatePassword, trigger: 'blur' },
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
@@ -97,7 +137,7 @@ async function handleInit() {
 
   loading.value = true
   try {
-    await api.auth.initAdmin(form.email, form.password)
+    await api.auth.initAdmin(form.username, form.password)
     ElMessage.success('管理员创建成功，请登录')
     router.push('/login')
   } catch (error: any) {
@@ -144,5 +184,27 @@ async function handleInit() {
 
 .init-btn {
   width: 100%;
+}
+
+.password-tips {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #606266;
+
+  p {
+    margin: 0 0 8px 0;
+    font-weight: 500;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+    li {
+      margin: 4px 0;
+    }
+  }
 }
 </style>

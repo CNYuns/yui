@@ -23,7 +23,7 @@ import (
 
 var (
 	configPath = flag.String("config", "config.yaml", "配置文件路径")
-	Version    = "1.3.4" // 通过 -ldflags 注入
+	Version    = "1.3.5" // 通过 -ldflags 注入
 )
 
 func main() {
@@ -241,6 +241,8 @@ func setupRouter(xrayManager *xray.Manager) *gin.Engine {
 		system := auth.Group("/system")
 		{
 			system.GET("/status", systemHandler.GetStatus)
+			system.GET("/check-port", systemHandler.CheckPort)
+			system.GET("/check-update", systemHandler.CheckUpdate)
 			system.POST("/reload", middleware.RequireAdmin(), systemHandler.ReloadXray)
 			system.POST("/restart", middleware.RequireAdmin(), systemHandler.RestartXray)
 			system.GET("/config", middleware.RequireAdmin(), systemHandler.GetXrayConfig)

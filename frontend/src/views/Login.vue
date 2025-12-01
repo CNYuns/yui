@@ -7,8 +7,8 @@
       </div>
 
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="handleLogin">
-        <el-form-item prop="email">
-          <el-input v-model="form.email" placeholder="邮箱" size="large" prefix-icon="Message" />
+        <el-form-item prop="username">
+          <el-input v-model="form.username" placeholder="用户名" size="large" prefix-icon="User" />
         </el-form-item>
 
         <el-form-item prop="password">
@@ -52,18 +52,16 @@ const loading = ref(false)
 const checking = ref(true)
 
 const form = reactive({
-  email: '',
+  username: '',
   password: '',
 })
 
 const rules: FormRules = {
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' },
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
   ],
 }
 
@@ -86,7 +84,7 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    await userStore.login(form.email, form.password)
+    await userStore.login(form.username, form.password)
     ElMessage.success('登录成功')
     router.push('/')
   } catch (error: any) {

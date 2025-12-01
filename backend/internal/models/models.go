@@ -8,18 +8,19 @@ import (
 
 // User 管理员账号
 type User struct {
-	ID        uint           `gorm:"primaryKey" json:"id"`
-	Email     string         `gorm:"uniqueIndex;size:255" json:"email"`
-	Password  string         `gorm:"size:255" json:"-"`
-	Role      string         `gorm:"size:50;default:viewer" json:"role"` // admin, operator, viewer
-	Nickname  string         `gorm:"size:100" json:"nickname"`
-	TwoFA     bool           `gorm:"default:false" json:"two_fa"`
-	TOTPSecret string        `gorm:"size:255" json:"-"`
-	LastLogin *time.Time     `json:"last_login,omitempty"`
-	Status    int            `gorm:"default:1" json:"status"` // 1: active, 0: disabled
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	Username   string         `gorm:"uniqueIndex;size:32" json:"username"`
+	Email      string         `gorm:"size:255" json:"email,omitempty"` // 可选
+	Password   string         `gorm:"size:255" json:"-"`
+	Role       string         `gorm:"size:50;default:viewer" json:"role"` // admin, operator, viewer
+	Nickname   string         `gorm:"size:100" json:"nickname"`
+	TwoFA      bool           `gorm:"default:false" json:"two_fa"`
+	TOTPSecret string         `gorm:"size:255" json:"-"`
+	LastLogin  *time.Time     `json:"last_login,omitempty"`
+	Status     int            `gorm:"default:1" json:"status"` // 1: active, 0: disabled
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Client 业务用户

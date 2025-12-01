@@ -42,12 +42,12 @@ http.interceptors.response.use(
 export default {
   auth: {
     check: () => http.get('/auth/check'),
-    login: (email: string, password: string) => http.post('/auth/login', { email, password }),
+    login: (username: string, password: string) => http.post('/auth/login', { username, password }),
     logout: () => http.post('/auth/logout'),
     getProfile: () => http.get('/auth/profile'),
     changePassword: (oldPassword: string, newPassword: string) =>
       http.put('/auth/password', { old_password: oldPassword, new_password: newPassword }),
-    initAdmin: (email: string, password: string) => http.post('/auth/init', { email, password }),
+    initAdmin: (username: string, password: string) => http.post('/auth/init', { username, password }),
   },
 
   users: {
@@ -110,6 +110,8 @@ export default {
     reload: () => http.post('/system/reload'),
     restart: () => http.post('/system/restart'),
     getConfig: () => http.get('/system/config'),
+    checkPort: (port: number) => http.get('/system/check-port', { params: { port } }),
+    checkUpdate: () => http.get('/system/check-update'),
   },
 
   audit: {
