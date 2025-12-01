@@ -23,7 +23,7 @@ import (
 
 var (
 	configPath = flag.String("config", "config.yaml", "配置文件路径")
-	Version    = "1.2.6" // 通过 -ldflags 注入
+	Version    = "1.2.7" // 通过 -ldflags 注入
 )
 
 func main() {

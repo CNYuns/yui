@@ -137,7 +137,7 @@ const passwordRules: FormRules = {
     {
       validator: (_rule: any, value: string, callback: Function) => {
         if (value !== passwordForm.newPassword) {
-          callback(new Error('两��输入的密码不一致'))
+          callback(new Error('两次输入的密码不一致'))
         } else {
           callback()
         }

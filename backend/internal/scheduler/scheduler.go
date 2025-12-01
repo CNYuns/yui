@@ -61,7 +61,7 @@ func (s *Scheduler) collectTraffic() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// TODO: �� Xray API 获取流量数据并更新到数据库
+	// TODO: 从 Xray API 获取流量数据并更新到数据库
 	// 这需要连接到 Xray 的 stats API
 }
 
