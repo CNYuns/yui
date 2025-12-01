@@ -160,6 +160,9 @@ func (m *Manager) Start() error {
 		m.process.Env = append(os.Environ(), "XRAY_LOCATION_ASSET="+m.assetsPath)
 	}
 
+	// 设置进程属性（平台相关）
+	m.process.SysProcAttr = getSysProcAttr()
+
 	if err := m.process.Start(); err != nil {
 		return fmt.Errorf("启动失败: %v", err)
 	}
@@ -168,6 +171,16 @@ func (m *Manager) Start() error {
 
 	// 监控进程
 	go m.monitor()
+
+	// 等待短暂时间确认进程正常启动
+	time.Sleep(100 * time.Millisecond)
+	if m.process.Process != nil {
+		// 检查进程是否还在运行
+		if err := m.process.Process.Signal(syscall.Signal(0)); err != nil {
+			m.running = false
+			return fmt.Errorf("进程启动后立即退出")
+		}
+	}
 
 	return nil
 }
@@ -295,14 +308,19 @@ func (m *Manager) generateConfig() error {
 			Protocol: ib.Protocol,
 		}
 
-		// 获取此入站的所有客户端
-		clients, err := m.getInboundClients(ib.ID)
-		if err != nil {
-			// 如果获取客户端失败，使用空切片继续
-			clients = []models.Client{}
+		// 优先使用数据库中保存的 settings，否则根据客户端生成
+		if ib.Settings != "" && ib.Settings != "null" && ib.Settings != "{}" {
+			// 使用用户自定义的 settings
+			inboundConfig.Settings = json.RawMessage(ib.Settings)
+		} else {
+			// 获取此入站的所有客户端，生成默认 settings
+			clients, err := m.getInboundClients(ib.ID)
+			if err != nil {
+				clients = []models.Client{}
+			}
+			settings := m.buildInboundSettings(ib.Protocol, clients)
+			inboundConfig.Settings = settings
 		}
-		settings := m.buildInboundSettings(ib.Protocol, clients)
-		inboundConfig.Settings = settings
 
 		if ib.StreamSettings != "" && ib.StreamSettings != "null" {
 			inboundConfig.StreamSettings = json.RawMessage(ib.StreamSettings)
@@ -345,6 +363,14 @@ func (m *Manager) generateConfig() error {
 		}
 	}
 
+	// 添加 API 出站处理器（用于 API 路由）
+	apiOutbound := OutboundConfig{
+		Tag:      "api",
+		Protocol: "freedom",
+		Settings: json.RawMessage(`{}`),
+	}
+	xrayConfig.Outbounds = append(xrayConfig.Outbounds, apiOutbound)
+
 	// 写入文件
 	configDir := filepath.Dir(m.configPath)
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -386,6 +412,8 @@ func (m *Manager) buildInboundSettings(protocol string, clients []models.Client)
 		return m.buildHTTPSettings(clients)
 	case "dokodemo-door":
 		return m.buildDokodemoSettings()
+	case "wireguard":
+		return m.buildWireGuardSettings(clients)
 	default:
 		return json.RawMessage(`{}`)
 	}
@@ -569,6 +597,36 @@ func (m *Manager) buildDokodemoSettings() json.RawMessage {
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return json.RawMessage(`{"network":"tcp,udp","followRedirect":true}`)
+	}
+	return data
+}
+
+func (m *Manager) buildWireGuardSettings(clients []models.Client) json.RawMessage {
+	// WireGuard 协议配置
+	// 注意：WireGuard 在 Xray 中主要用于出站，入站支持有限
+	type wgPeer struct {
+		PublicKey  string   `json:"publicKey"`
+		AllowedIPs []string `json:"allowedIPs,omitempty"`
+	}
+
+	peers := make([]wgPeer, 0, len(clients))
+	for _, c := range clients {
+		// 使用客户端 UUID 作为公钥标识（实际应用需要真实公钥）
+		peers = append(peers, wgPeer{
+			PublicKey:  c.UUID,
+			AllowedIPs: []string{"0.0.0.0/0"},
+		})
+	}
+
+	settings := map[string]interface{}{
+		"secretKey": "", // 需要用户配置私钥
+		"peers":     peers,
+		"mtu":       1420,
+	}
+
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"peers":[],"mtu":1420}`)
 	}
 	return data
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"strconv"
+	"strings"
 
 	"y-ui/internal/services"
 	"y-ui/internal/xray"
@@ -66,13 +67,66 @@ func (h *InboundHandler) Get(c *gin.Context) {
 
 // Create 创建入站
 func (h *InboundHandler) Create(c *gin.Context) {
-	var req services.CreateInboundRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+	// 先用 map 接收，以便标准化字段
+	var rawReq map[string]interface{}
+	if err := c.ShouldBindJSON(&rawReq); err != nil {
+		response.BadRequest(c, "无效的 JSON 数据")
 		return
 	}
 
-	inbound, err := h.inboundService.Create(&req)
+	// 标准化 protocol 字段
+	if protocol, ok := rawReq["protocol"].(string); ok {
+		rawReq["protocol"] = strings.ToLower(strings.TrimSpace(protocol))
+	}
+
+	// 验证协议
+	protocol, _ := rawReq["protocol"].(string)
+	validProtocols := map[string]bool{
+		"vmess": true, "vless": true, "trojan": true, "shadowsocks": true,
+		"socks": true, "http": true, "dokodemo-door": true, "wireguard": true,
+	}
+	if !validProtocols[protocol] {
+		response.BadRequest(c, "无效的协议类型，支持: vmess, vless, trojan, shadowsocks, socks, http, dokodemo-door, wireguard")
+		return
+	}
+
+	// 验证必填字段
+	tag, _ := rawReq["tag"].(string)
+	if strings.TrimSpace(tag) == "" {
+		response.BadRequest(c, "标签不能为空")
+		return
+	}
+
+	port, _ := rawReq["port"].(float64)
+	if port < 1 || port > 65535 {
+		response.BadRequest(c, "端口必须在 1-65535 之间")
+		return
+	}
+
+	// 构建请求
+	listen, _ := rawReq["listen"].(string)
+	if listen == "" {
+		listen = "0.0.0.0"
+	}
+	remark, _ := rawReq["remark"].(string)
+	enable := true
+	if e, ok := rawReq["enable"].(bool); ok {
+		enable = e
+	}
+
+	req := &services.CreateInboundRequest{
+		Tag:            strings.TrimSpace(tag),
+		Protocol:       protocol,
+		Port:           int(port),
+		Listen:         listen,
+		Settings:       rawReq["settings"],
+		StreamSettings: rawReq["stream_settings"],
+		Sniffing:       rawReq["sniffing"],
+		Enable:         &enable,
+		Remark:         remark,
+	}
+
+	inbound, err := h.inboundService.Create(req)
 	if err != nil {
 		response.Error(c, 4001, err.Error())
 		return
@@ -94,13 +148,54 @@ func (h *InboundHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var req services.UpdateInboundRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "参数错误: "+err.Error())
+	// 使用 map 接收以便标准化
+	var rawReq map[string]interface{}
+	if err := c.ShouldBindJSON(&rawReq); err != nil {
+		response.BadRequest(c, "无效的 JSON 数据")
 		return
 	}
 
-	inbound, err := h.inboundService.Update(uint(id), &req)
+	// 标准化 protocol 字段
+	if protocol, ok := rawReq["protocol"].(string); ok {
+		protocol = strings.ToLower(strings.TrimSpace(protocol))
+		if protocol != "" {
+			validProtocols := map[string]bool{
+				"vmess": true, "vless": true, "trojan": true, "shadowsocks": true,
+				"socks": true, "http": true, "dokodemo-door": true, "wireguard": true,
+			}
+			if !validProtocols[protocol] {
+				response.BadRequest(c, "无效的协议类型")
+				return
+			}
+		}
+		rawReq["protocol"] = protocol
+	}
+
+	// 构建更新请求
+	req := &services.UpdateInboundRequest{}
+	if tag, ok := rawReq["tag"].(string); ok {
+		req.Tag = strings.TrimSpace(tag)
+	}
+	if protocol, ok := rawReq["protocol"].(string); ok {
+		req.Protocol = protocol
+	}
+	if port, ok := rawReq["port"].(float64); ok {
+		req.Port = int(port)
+	}
+	if listen, ok := rawReq["listen"].(string); ok {
+		req.Listen = listen
+	}
+	if remark, ok := rawReq["remark"].(string); ok {
+		req.Remark = remark
+	}
+	if enable, ok := rawReq["enable"].(bool); ok {
+		req.Enable = &enable
+	}
+	req.Settings = rawReq["settings"]
+	req.StreamSettings = rawReq["stream_settings"]
+	req.Sniffing = rawReq["sniffing"]
+
+	inbound, err := h.inboundService.Update(uint(id), req)
 	if err != nil {
 		response.Error(c, 4002, err.Error())
 		return

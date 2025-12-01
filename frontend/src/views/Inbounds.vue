@@ -67,6 +67,7 @@
                 <el-option label="SOCKS" value="socks" />
                 <el-option label="HTTP" value="http" />
                 <el-option label="Dokodemo-Door (任意门)" value="dokodemo-door" />
+                <el-option label="WireGuard" value="wireguard" />
               </el-select>
             </el-form-item>
             <el-form-item label="端口" prop="port">
@@ -81,6 +82,98 @@
             <el-form-item label="启用">
               <el-switch v-model="form.enable" />
             </el-form-item>
+          </el-tab-pane>
+
+          <el-tab-pane label="协议设置" name="protocol">
+            <!-- SOCKS/HTTP 账号密码设置 -->
+            <template v-if="form.protocol === 'socks' || form.protocol === 'http'">
+              <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+                {{ form.protocol === 'socks' ? 'SOCKS5' : 'HTTP' }} 代理认证设置（可选）
+              </el-alert>
+              <el-form-item label="认证方式">
+                <el-radio-group v-model="protocolSettings.auth">
+                  <el-radio label="noauth">无需认证</el-radio>
+                  <el-radio label="password">密码认证</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <template v-if="protocolSettings.auth === 'password'">
+                <el-form-item label="用户名">
+                  <el-input v-model="protocolSettings.user" placeholder="输入用户名" />
+                </el-form-item>
+                <el-form-item label="密码">
+                  <el-input v-model="protocolSettings.pass" type="password" placeholder="输入密码" show-password />
+                </el-form-item>
+              </template>
+              <el-form-item label="允许UDP" v-if="form.protocol === 'socks'">
+                <el-switch v-model="protocolSettings.udp" />
+              </el-form-item>
+            </template>
+
+            <!-- Shadowsocks 设置 -->
+            <template v-if="form.protocol === 'shadowsocks'">
+              <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+                Shadowsocks 加密设置
+              </el-alert>
+              <el-form-item label="加密方式">
+                <el-select v-model="protocolSettings.method">
+                  <el-option label="2022-blake3-aes-128-gcm" value="2022-blake3-aes-128-gcm" />
+                  <el-option label="2022-blake3-aes-256-gcm" value="2022-blake3-aes-256-gcm" />
+                  <el-option label="2022-blake3-chacha20-poly1305" value="2022-blake3-chacha20-poly1305" />
+                  <el-option label="aes-256-gcm" value="aes-256-gcm" />
+                  <el-option label="aes-128-gcm" value="aes-128-gcm" />
+                  <el-option label="chacha20-poly1305" value="chacha20-poly1305" />
+                  <el-option label="xchacha20-poly1305" value="xchacha20-poly1305" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="密码">
+                <el-input v-model="protocolSettings.password" placeholder="Shadowsocks 密码" />
+                <el-button type="primary" link @click="generateSSPassword">随机生成</el-button>
+              </el-form-item>
+            </template>
+
+            <!-- Trojan 设置 -->
+            <template v-if="form.protocol === 'trojan'">
+              <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+                Trojan 用户通过"用户管理"添加。创建入站后点击"用户"按钮添加。
+              </el-alert>
+            </template>
+
+            <!-- VMess/VLESS 设置 -->
+            <template v-if="form.protocol === 'vmess' || form.protocol === 'vless'">
+              <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+                {{ form.protocol.toUpperCase() }} 用户通过"用户管理"添加。创建入站后点击"用户"按钮添加。
+              </el-alert>
+              <template v-if="form.protocol === 'vless'">
+                <el-form-item label="VLESS Flow">
+                  <el-select v-model="protocolSettings.flow" placeholder="选择 Flow（可选）">
+                    <el-option label="无" value="" />
+                    <el-option label="xtls-rprx-vision" value="xtls-rprx-vision" />
+                  </el-select>
+                </el-form-item>
+              </template>
+            </template>
+
+            <!-- Dokodemo-door 设置 -->
+            <template v-if="form.protocol === 'dokodemo-door'">
+              <el-alert type="info" :closable="false" style="margin-bottom: 16px">
+                任意门协议用于端口转发或透明代理
+              </el-alert>
+              <el-form-item label="目标地址">
+                <el-input v-model="protocolSettings.address" placeholder="如 1.1.1.1" />
+              </el-form-item>
+              <el-form-item label="目标端口">
+                <el-input-number v-model="protocolSettings.destPort" :min="1" :max="65535" />
+              </el-form-item>
+              <el-form-item label="网络协议">
+                <el-checkbox-group v-model="protocolSettings.networks">
+                  <el-checkbox label="tcp" />
+                  <el-checkbox label="udp" />
+                </el-checkbox-group>
+              </el-form-item>
+              <el-form-item label="跟随重定向">
+                <el-switch v-model="protocolSettings.followRedirect" />
+              </el-form-item>
+            </template>
           </el-tab-pane>
 
           <el-tab-pane label="传输配置" name="transport">
@@ -260,6 +353,25 @@ const sniffingEnabled = ref(true)
 const sniffingDestOverride = ref(['http', 'tls'])
 const sniffingMetadataOnly = ref(false)
 
+// 协议设置
+const protocolSettings = reactive({
+  // SOCKS/HTTP
+  auth: 'noauth',
+  user: '',
+  pass: '',
+  udp: true,
+  // Shadowsocks
+  method: 'aes-256-gcm',
+  password: '',
+  // VLESS
+  flow: '',
+  // Dokodemo-door
+  address: '',
+  destPort: 443,
+  networks: ['tcp', 'udp'],
+  followRedirect: false,
+})
+
 // 用户管理相关
 const currentInboundId = ref(0)
 const inboundClients = ref<any[]>([])
@@ -300,6 +412,24 @@ function getTransportType(row: any): string {
 
 function onProtocolChange() {
   // 根据协议调整默认设置
+  if (form.protocol === 'socks') {
+    protocolSettings.auth = 'noauth'
+    protocolSettings.udp = true
+  } else if (form.protocol === 'shadowsocks') {
+    protocolSettings.method = 'aes-256-gcm'
+    if (!protocolSettings.password) {
+      generateSSPassword()
+    }
+  }
+}
+
+function generateSSPassword() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let password = ''
+  for (let i = 0; i < 16; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  protocolSettings.password = password
 }
 
 function openDialog(row?: any) {
@@ -403,8 +533,42 @@ async function handleSubmit() {
     metadataOnly: sniffingMetadataOnly.value,
   } : { enabled: false }
 
+  // 构建协议设置
+  let settings: any = {}
+  if (form.protocol === 'socks') {
+    settings = {
+      auth: protocolSettings.auth,
+      udp: protocolSettings.udp,
+      ip: '127.0.0.1',
+    }
+    if (protocolSettings.auth === 'password' && protocolSettings.user && protocolSettings.pass) {
+      settings.accounts = [{ user: protocolSettings.user, pass: protocolSettings.pass }]
+    }
+  } else if (form.protocol === 'http') {
+    settings = {}
+    if (protocolSettings.auth === 'password' && protocolSettings.user && protocolSettings.pass) {
+      settings.accounts = [{ user: protocolSettings.user, pass: protocolSettings.pass }]
+    }
+  } else if (form.protocol === 'shadowsocks') {
+    settings = {
+      method: protocolSettings.method,
+      password: protocolSettings.password,
+      network: 'tcp,udp',
+    }
+  } else if (form.protocol === 'dokodemo-door') {
+    settings = {
+      address: protocolSettings.address || '',
+      port: protocolSettings.destPort || 0,
+      network: protocolSettings.networks.join(','),
+      followRedirect: protocolSettings.followRedirect,
+    }
+  } else if (form.protocol === 'vless' && protocolSettings.flow) {
+    settings = { decryption: 'none', flow: protocolSettings.flow }
+  }
+
   const submitData = {
     ...form,
+    settings: Object.keys(settings).length > 0 ? settings : undefined,
     stream_settings: stream,
     sniffing: sniffing,
   }

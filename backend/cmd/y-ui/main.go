@@ -23,7 +23,7 @@ import (
 
 var (
 	configPath = flag.String("config", "config.yaml", "配置文件路径")
-	Version    = "1.3.2" // 通过 -ldflags 注入
+	Version    = "1.3.3" // 通过 -ldflags 注入
 )
 
 func main() {
@@ -54,6 +54,21 @@ func main() {
 
 	// 初始化 Xray 管理器
 	xrayManager := xray.NewManager(&cfg.Xray)
+
+	// 启动 Xray（带重试）
+	var xrayStartErr error
+	for i := 0; i < 3; i++ {
+		xrayStartErr = xrayManager.Start()
+		if xrayStartErr == nil {
+			fmt.Println("Xray 启动成功")
+			break
+		}
+		fmt.Printf("Xray 启动失败 (尝试 %d/3): %v\n", i+1, xrayStartErr)
+		time.Sleep(time.Second)
+	}
+	if xrayStartErr != nil {
+		fmt.Printf("Xray 启动失败，请通过界面手动启动: %v\n", xrayStartErr)
+	}
 
 	// 初始化调度器
 	sched := scheduler.NewScheduler(xrayManager, cfg.Database.Path)

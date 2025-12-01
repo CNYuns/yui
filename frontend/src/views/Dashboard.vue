@@ -35,9 +35,15 @@
           <template #header>
             <div class="card-header">
               <span>系统状态</span>
-              <el-tag :type="systemStatus.xrayRunning ? 'success' : 'danger'" size="small">
-                Xray: {{ systemStatus.xrayRunning ? '运行中' : '已停止' }}
-              </el-tag>
+              <div class="xray-controls">
+                <el-tag :type="systemStatus.xrayRunning ? 'success' : 'danger'" size="small">
+                  Xray: {{ systemStatus.xrayRunning ? '运行中' : '已停止' }}
+                </el-tag>
+                <el-button-group size="small" style="margin-left: 10px">
+                  <el-button @click="restartXray" :loading="xrayLoading">重启</el-button>
+                  <el-button @click="reloadXray" :loading="xrayLoading">重载</el-button>
+                </el-button-group>
+              </div>
             </div>
           </template>
 
@@ -81,11 +87,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import api from '@/api'
 
 const chartRef = ref<HTMLElement>()
 let chart: echarts.ECharts | null = null
+const xrayLoading = ref(false)
 
 const stats = reactive({
   totalClients: 0,
@@ -161,6 +169,32 @@ async function fetchSystemStatus() {
     })
   } catch (e) {
     console.error(e)
+  }
+}
+
+async function restartXray() {
+  xrayLoading.value = true
+  try {
+    await api.system.restart()
+    ElMessage.success('Xray 重启成功')
+    await fetchSystemStatus()
+  } catch (e: any) {
+    ElMessage.error(e.message || '重启失败')
+  } finally {
+    xrayLoading.value = false
+  }
+}
+
+async function reloadXray() {
+  xrayLoading.value = true
+  try {
+    await api.system.reload()
+    ElMessage.success('Xray 配置重载成功')
+    await fetchSystemStatus()
+  } catch (e: any) {
+    ElMessage.error(e.message || '重载失败')
+  } finally {
+    xrayLoading.value = false
   }
 }
 
@@ -250,6 +284,11 @@ function formatUptime(seconds: number): string {
     .card-header {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+    }
+
+    .xray-controls {
+      display: flex;
       align-items: center;
     }
 

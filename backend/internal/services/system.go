@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -55,6 +56,10 @@ func (s *SystemService) GetStatus() (*SystemStatus, error) {
 	status := &SystemStatus{
 		OS:   runtime.GOOS,
 		Arch: runtime.GOARCH,
+		CPU: CPUStatus{
+			Cores: runtime.NumCPU(),
+			Usage: []float64{0},
+		},
 	}
 
 	// 主机信息
@@ -65,16 +70,22 @@ func (s *SystemService) GetStatus() (*SystemStatus, error) {
 		status.Uptime = hostInfo.Uptime
 	}
 
-	// CPU 信息
-	cpuPercent, err := cpu.Percent(0, true)
-	if err == nil {
+	// CPU 信息 - 使用 500ms 间隔获取更准确的数据
+	cpuPercent, err := cpu.Percent(500*time.Millisecond, true)
+	if err == nil && len(cpuPercent) > 0 {
 		status.CPU.Usage = cpuPercent
 		status.CPU.Cores = len(cpuPercent)
+	} else {
+		// 如果获取失败，尝试获取总体使用率
+		cpuTotal, err := cpu.Percent(500*time.Millisecond, false)
+		if err == nil && len(cpuTotal) > 0 {
+			status.CPU.Usage = cpuTotal
+		}
 	}
 
 	// 内存信息
 	memInfo, err := mem.VirtualMemory()
-	if err == nil {
+	if err == nil && memInfo != nil {
 		status.Memory = MemStatus{
 			Total:       memInfo.Total,
 			Used:        memInfo.Used,
@@ -83,14 +94,18 @@ func (s *SystemService) GetStatus() (*SystemStatus, error) {
 		}
 	}
 
-	// 磁盘信息
-	diskInfo, err := disk.Usage("/")
-	if err == nil {
-		status.Disk = DiskStatus{
-			Total:       diskInfo.Total,
-			Used:        diskInfo.Used,
-			Free:        diskInfo.Free,
-			UsedPercent: diskInfo.UsedPercent,
+	// 磁盘信息 - 尝试多个路径
+	diskPaths := []string{"/", "/home", "C:\\"}
+	for _, path := range diskPaths {
+		diskInfo, err := disk.Usage(path)
+		if err == nil && diskInfo != nil {
+			status.Disk = DiskStatus{
+				Total:       diskInfo.Total,
+				Used:        diskInfo.Used,
+				Free:        diskInfo.Free,
+				UsedPercent: diskInfo.UsedPercent,
+			}
+			break
 		}
 	}
 
@@ -103,16 +118,27 @@ func (s *SystemService) GetStatus() (*SystemStatus, error) {
 
 // isXrayRunning 检测 Xray 是否运行
 func (s *SystemService) isXrayRunning() bool {
+	// 方法1：使用 gopsutil 检测进程
 	processes, err := process.Processes()
-	if err != nil {
-		return false
-	}
-	for _, p := range processes {
-		name, err := p.Name()
-		if err == nil && strings.Contains(strings.ToLower(name), "xray") {
-			return true
+	if err == nil {
+		for _, p := range processes {
+			name, err := p.Name()
+			if err == nil && strings.ToLower(name) == "xray" {
+				// 检查是否是 run 命令（排除 version 检查等）
+				cmdline, _ := p.Cmdline()
+				if strings.Contains(cmdline, "run") {
+					return true
+				}
+			}
 		}
 	}
+
+	// 方法2：使用 pgrep 检查进程（Linux 备用）
+	cmd := exec.Command("pgrep", "-x", "xray")
+	if err := cmd.Run(); err == nil {
+		return true
+	}
+
 	return false
 }
 

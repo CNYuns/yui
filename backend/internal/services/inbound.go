@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"y-ui/internal/database"
 	"y-ui/internal/models"
@@ -23,7 +24,16 @@ type CreateInboundRequest struct {
 	Settings       any    `json:"settings"`
 	StreamSettings any    `json:"stream_settings"`
 	Sniffing       any    `json:"sniffing"`
+	Enable         *bool  `json:"enable"`
 	Remark         string `json:"remark"`
+}
+
+// Validate 验证并标准化请求
+func (r *CreateInboundRequest) Validate() error {
+	// 标准化协议名称（小写）
+	r.Protocol = strings.ToLower(strings.TrimSpace(r.Protocol))
+	r.Tag = strings.TrimSpace(r.Tag)
+	return nil
 }
 
 type UpdateInboundRequest struct {
@@ -105,6 +115,12 @@ func (s *InboundService) Create(req *CreateInboundRequest) (*models.Inbound, err
 		return nil, fmt.Errorf("序列化 Sniffing 失败: %v", err)
 	}
 
+	// 处理 Enable 字段，默认为 true
+	enable := true
+	if req.Enable != nil {
+		enable = *req.Enable
+	}
+
 	inbound := models.Inbound{
 		Tag:            req.Tag,
 		Protocol:       req.Protocol,
@@ -113,7 +129,7 @@ func (s *InboundService) Create(req *CreateInboundRequest) (*models.Inbound, err
 		Settings:       string(settingsJSON),
 		StreamSettings: string(streamJSON),
 		Sniffing:       string(sniffingJSON),
-		Enable:         true,
+		Enable:         enable,
 		Remark:         req.Remark,
 	}
 
