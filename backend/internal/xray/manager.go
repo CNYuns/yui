@@ -384,6 +384,8 @@ func (m *Manager) buildInboundSettings(protocol string, clients []models.Client)
 		return m.buildSocksSettings(clients)
 	case "http":
 		return m.buildHTTPSettings(clients)
+	case "dokodemo-door":
+		return m.buildDokodemoSettings()
 	default:
 		return json.RawMessage(`{}`)
 	}
@@ -550,6 +552,23 @@ func (m *Manager) buildHTTPSettings(clients []models.Client) json.RawMessage {
 	data, err := json.Marshal(settings)
 	if err != nil {
 		return json.RawMessage(`{"timeout":300,"allowTransparent":false}`)
+	}
+	return data
+}
+
+func (m *Manager) buildDokodemoSettings() json.RawMessage {
+	// Dokodemo-door (任意门) 协议配置
+	// 用于透明代理或端口转发
+	settings := map[string]interface{}{
+		"address":        "",
+		"port":           0,
+		"network":        "tcp,udp",
+		"followRedirect": true,
+	}
+
+	data, err := json.Marshal(settings)
+	if err != nil {
+		return json.RawMessage(`{"network":"tcp,udp","followRedirect":true}`)
 	}
 	return data
 }

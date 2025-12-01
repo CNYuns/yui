@@ -1,6 +1,6 @@
 .PHONY: all build clean frontend backend dev install uninstall
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "1.3.0")
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "1.3.1")
 BINARY_NAME = y-ui-server
 
 all: frontend backend

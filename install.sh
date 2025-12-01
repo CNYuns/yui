@@ -178,7 +178,7 @@ XRAYEOF
 get_latest_version() {
     local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | cut -d'"' -f4)
     if [[ -z "$latest" || ! "$latest" =~ ^v[0-9] ]]; then
-        echo "v1.3.0"
+        echo "v1.3.1"
     else
         echo "$latest"
     fi
