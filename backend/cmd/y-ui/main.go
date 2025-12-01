@@ -71,7 +71,7 @@ func main() {
 	}
 
 	// 初始化调度器
-	sched := scheduler.NewScheduler(xrayManager, cfg.Database.Path)
+	sched := scheduler.NewScheduler(xrayManager, cfg.Database.DSN)
 	sched.Start()
 	defer sched.Stop()
 
