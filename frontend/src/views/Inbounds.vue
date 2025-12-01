@@ -70,6 +70,46 @@
                 <el-option label="WireGuard" value="wireguard" />
               </el-select>
             </el-form-item>
+
+            <!-- SOCKS/HTTP 认证设置 - 直接显示在协议选择下方 -->
+            <template v-if="form.protocol === 'socks' || form.protocol === 'http'">
+              <el-form-item label="认证方式">
+                <el-radio-group v-model="protocolSettings.auth">
+                  <el-radio label="noauth">无需认证</el-radio>
+                  <el-radio label="password">密码认证</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <template v-if="protocolSettings.auth === 'password'">
+                <el-form-item label="用户名">
+                  <el-input v-model="protocolSettings.user" placeholder="输入用户名" />
+                </el-form-item>
+                <el-form-item label="密码">
+                  <el-input v-model="protocolSettings.pass" type="password" placeholder="输入密码" show-password />
+                </el-form-item>
+              </template>
+              <el-form-item label="允许UDP" v-if="form.protocol === 'socks'">
+                <el-switch v-model="protocolSettings.udp" />
+              </el-form-item>
+            </template>
+
+            <!-- Shadowsocks 设置 - 直接显示 -->
+            <template v-if="form.protocol === 'shadowsocks'">
+              <el-form-item label="加密方式">
+                <el-select v-model="protocolSettings.method">
+                  <el-option label="aes-256-gcm" value="aes-256-gcm" />
+                  <el-option label="aes-128-gcm" value="aes-128-gcm" />
+                  <el-option label="chacha20-poly1305" value="chacha20-poly1305" />
+                  <el-option label="2022-blake3-aes-256-gcm" value="2022-blake3-aes-256-gcm" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="密码">
+                <div style="display: flex; gap: 10px;">
+                  <el-input v-model="protocolSettings.password" placeholder="Shadowsocks 密码" style="flex: 1" />
+                  <el-button @click="generateSSPassword">随机生成</el-button>
+                </div>
+              </el-form-item>
+            </template>
+
             <el-form-item label="端口" prop="port">
               <el-input-number v-model="form.port" :min="1" :max="65535" />
             </el-form-item>
