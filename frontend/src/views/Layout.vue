@@ -4,7 +4,7 @@
       <!-- 侧边栏 -->
       <el-aside width="220px" class="sidebar">
         <div class="logo">
-          <h1>XPanel</h1>
+          <h1>Y-UI</h1>
         </div>
 
         <el-menu

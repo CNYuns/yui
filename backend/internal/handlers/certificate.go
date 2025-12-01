@@ -73,7 +73,7 @@ func (h *CertificateHandler) Request(c *gin.Context) {
 	cfg := config.GlobalConfig
 	certDir := cfg.TLS.CertPath
 	if certDir == "" {
-		certDir = "/etc/xpanel/certs"
+		certDir = "/etc/y-ui/certs"
 	}
 
 	cert, err := h.certService.Request(&req, certDir)
