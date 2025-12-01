@@ -2,7 +2,7 @@
 
 #======================================
 # Y-UI 一键安装脚本
-# https://github.com/CNYuns/Yun
+# https://github.com/CNYuns/yui
 #======================================
 
 set -e
@@ -18,7 +18,7 @@ NC='\033[0m'
 # 配置
 INSTALL_DIR="/usr/local/y-ui"
 SERVICE_NAME="y-ui"
-GITHUB_REPO="CNYuns/Yun"
+GITHUB_REPO="CNYuns/yui"
 YUI_VERSION="${1:-latest}"
 XRAY_VERSION="v24.11.30"
 
@@ -178,7 +178,7 @@ XRAYEOF
 get_latest_version() {
     local latest=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null | grep -m1 '"tag_name"' | cut -d'"' -f4)
     if [[ -z "$latest" || ! "$latest" =~ ^v[0-9] ]]; then
-        echo "v1.2.8"
+        echo "v1.2.9"
     else
         echo "$latest"
     fi
@@ -450,7 +450,7 @@ show_config() {
 
 update_yui() {
     echo -e "${CYAN}更新 Y-UI...${NC}"
-    curl -L -o /tmp/install.sh https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh
+    curl -L -o /tmp/install.sh https://raw.githubusercontent.com/CNYuns/yui/main/install.sh
     bash /tmp/install.sh
 }
 
@@ -556,7 +556,7 @@ install_service() {
     cat > /etc/systemd/system/y-ui.service << 'EOF'
 [Unit]
 Description=Y-UI - Xray Web Management Panel
-Documentation=https://github.com/CNYuns/Yun
+Documentation=https://github.com/CNYuns/yui
 After=network.target network-online.target
 Wants=network-online.target
 

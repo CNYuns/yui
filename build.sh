@@ -6,7 +6,7 @@
 
 set -e
 
-VERSION=${1:-"1.2.8"}
+VERSION=${1:-"1.2.9"}
 BUILD_DIR="build"
 DIST_DIR="dist"
 

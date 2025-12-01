@@ -7,7 +7,7 @@
 ## 一键安装
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/yui/main/install.sh)
 ```
 
 安装完成后使用 `y-ui` 命令管理。
@@ -52,7 +52,7 @@ y-ui uninstall  # 卸载 Y-UI
 
 ```
 ========================================
-       Y-UI 管理面板 v1.2.8
+       Y-UI 管理面板 v1.2.9
 ========================================
 
 --- 服务管理 ---
@@ -157,8 +157,8 @@ docker run -d \
 
 ```bash
 # 克隆仓库
-git clone https://github.com/CNYuns/Yun.git
-cd Yun
+git clone https://github.com/CNYuns/yui.git
+cd yui
 
 # 构建
 make build
@@ -242,7 +242,7 @@ journalctl -u y-ui -f
 ```bash
 y-ui update
 # 或
-bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/yui/main/install.sh)
 ```
 
 ## 许可证
@@ -258,7 +258,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
 ## 联系方式
 
 - 邮箱：391475293@qq.com
-- GitHub：[CNYuns/Yun](https://github.com/CNYuns/Yun)
+- GitHub：[CNYuns/yui](https://github.com/CNYuns/yui)
 
 ## 致谢
 

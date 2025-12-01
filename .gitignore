@@ -38,3 +38,7 @@ Thumbs.db
 # Test
 coverage/
 *.test
+
+# Local docs
+claude.md
+CLAUDE.md

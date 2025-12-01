@@ -185,7 +185,7 @@ jobs:
             ### 一键安装
 
             ```bash
-            bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+            bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/yui/main/install.sh)
             ```
 
             ### 手动安装

@@ -1,6 +1,6 @@
 [Unit]
 Description=Y-UI - Xray Web Management Panel
-Documentation=https://github.com/CNYuns/Yun
+Documentation=https://github.com/CNYuns/yui
 After=network.target network-online.target
 Wants=network-online.target
 
