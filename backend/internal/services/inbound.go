@@ -17,7 +17,7 @@ func NewInboundService() *InboundService {
 
 type CreateInboundRequest struct {
 	Tag            string `json:"tag" binding:"required"`
-	Protocol       string `json:"protocol" binding:"required,oneof=vmess vless trojan shadowsocks wireguard"`
+	Protocol       string `json:"protocol" binding:"required,oneof=vmess vless trojan shadowsocks socks http dokodemo-door wireguard"`
 	Port           int    `json:"port" binding:"required,min=1,max=65535"`
 	Listen         string `json:"listen"`
 	Settings       any    `json:"settings"`
@@ -28,7 +28,7 @@ type CreateInboundRequest struct {
 
 type UpdateInboundRequest struct {
 	Tag            string `json:"tag"`
-	Protocol       string `json:"protocol" binding:"omitempty,oneof=vmess vless trojan shadowsocks wireguard"`
+	Protocol       string `json:"protocol" binding:"omitempty,oneof=vmess vless trojan shadowsocks socks http dokodemo-door wireguard"`
 	Port           int    `json:"port" binding:"omitempty,min=1,max=65535"`
 	Listen         string `json:"listen"`
 	Settings       any    `json:"settings"`

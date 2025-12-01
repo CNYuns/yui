@@ -66,6 +66,7 @@
                 <el-option label="Shadowsocks" value="shadowsocks" />
                 <el-option label="SOCKS" value="socks" />
                 <el-option label="HTTP" value="http" />
+                <el-option label="Dokodemo-Door (任意门)" value="dokodemo-door" />
               </el-select>
             </el-form-item>
             <el-form-item label="端口" prop="port">

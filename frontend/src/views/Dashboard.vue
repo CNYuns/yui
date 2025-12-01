@@ -57,12 +57,12 @@
 
           <div class="resource-item">
             <span>内存使用率</span>
-            <el-progress :percentage="systemStatus.memory?.usedPercent || 0" :stroke-width="8" />
+            <el-progress :percentage="memoryUsage" :stroke-width="8" />
           </div>
 
           <div class="resource-item">
             <span>磁盘使用率</span>
-            <el-progress :percentage="systemStatus.disk?.usedPercent || 0" :stroke-width="8" />
+            <el-progress :percentage="diskUsage" :stroke-width="8" />
           </div>
         </el-card>
       </el-col>
@@ -110,6 +110,14 @@ const cpuUsage = computed(() => {
   if (!systemStatus.cpu?.usage?.length) return 0
   const avg = systemStatus.cpu.usage.reduce((a: number, b: number) => a + b, 0) / systemStatus.cpu.usage.length
   return Math.round(avg)
+})
+
+const memoryUsage = computed(() => {
+  return Math.round(systemStatus.memory?.used_percent || 0)
+})
+
+const diskUsage = computed(() => {
+  return Math.round(systemStatus.disk?.used_percent || 0)
 })
 
 onMounted(async () => {

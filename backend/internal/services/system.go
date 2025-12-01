@@ -1,12 +1,15 @@
 package services
 
 import (
+	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 type SystemService struct{}
@@ -91,5 +94,50 @@ func (s *SystemService) GetStatus() (*SystemStatus, error) {
 		}
 	}
 
+	// Xray 状态检测
+	status.XrayRunning = s.isXrayRunning()
+	status.XrayVersion = s.getXrayVersion()
+
 	return status, nil
+}
+
+// isXrayRunning 检测 Xray 是否运行
+func (s *SystemService) isXrayRunning() bool {
+	processes, err := process.Processes()
+	if err != nil {
+		return false
+	}
+	for _, p := range processes {
+		name, err := p.Name()
+		if err == nil && strings.Contains(strings.ToLower(name), "xray") {
+			return true
+		}
+	}
+	return false
+}
+
+// getXrayVersion 获取 Xray 版本
+func (s *SystemService) getXrayVersion() string {
+	// 尝试常见的 Xray 路径
+	paths := []string{
+		"/usr/local/xray/xray",
+		"/usr/local/bin/xray",
+		"/usr/bin/xray",
+		"xray",
+	}
+	for _, path := range paths {
+		out, err := exec.Command(path, "version").Output()
+		if err == nil {
+			lines := strings.Split(string(out), "\n")
+			if len(lines) > 0 {
+				// 提取版本号，格式: "Xray 1.8.x ..."
+				parts := strings.Fields(lines[0])
+				if len(parts) >= 2 {
+					return parts[1]
+				}
+				return lines[0]
+			}
+		}
+	}
+	return "未安装"
 }
