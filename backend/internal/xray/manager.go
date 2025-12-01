@@ -230,7 +230,8 @@ func (m *Manager) Reload() error {
 
 	if !m.running || m.process == nil {
 		m.mu.Unlock()
-		return nil
+		// Xray 未运行时尝试启动
+		return m.Start()
 	}
 
 	// 发送 SIGHUP 信号热重载
