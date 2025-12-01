@@ -1,0 +1,209 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: linux
+            goarch: arm
+            goarm: '7'
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Build backend
+        working-directory: backend
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: '0'
+        run: |
+          go mod tidy
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server.exe ./cmd/y-ui
+          else
+            go build -ldflags "-s -w -X main.Version=$VERSION" -o y-ui-server ./cmd/y-ui
+          fi
+          ls -la
+
+      - name: Prepare package
+        run: |
+          mkdir -p package/dist
+          cp -r frontend/dist/* package/dist/
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cp backend/y-ui-server.exe package/
+          else
+            cp backend/y-ui-server package/
+          fi
+          cp config.example.yaml package/config.yaml
+          cp install.sh package/
+          cp y-ui.service package/
+          echo "Package contents:"
+          ls -la package/
+
+      - name: Create archive
+        run: |
+          ARCHIVE_NAME=y-ui-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cd package && zip -r ../${ARCHIVE_NAME}.zip .
+            cd .. && ls -la ${ARCHIVE_NAME}.zip
+          else
+            tar -czvf ${ARCHIVE_NAME}.tar.gz -C package .
+            ls -la ${ARCHIVE_NAME}.tar.gz
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            y-ui-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          if-no-files-found: warn
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Linux amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-amd64
+          path: release
+        continue-on-error: true
+
+      - name: Download Linux arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: release
+        continue-on-error: true
+
+      - name: Download Linux arm
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm
+          path: release
+        continue-on-error: true
+
+      - name: Download Windows amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64
+          path: release
+        continue-on-error: true
+
+      - name: Download Windows arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-arm64
+          path: release
+        continue-on-error: true
+
+      - name: Download Darwin amd64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-amd64
+          path: release
+        continue-on-error: true
+
+      - name: Download Darwin arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-arm64
+          path: release
+        continue-on-error: true
+
+      - name: Prepare release
+        run: |
+          cp install.sh release/
+          echo "Release files:"
+          ls -la release/
+
+      - name: Create checksums
+        working-directory: release
+        run: |
+          sha256sum *.tar.gz *.zip 2>/dev/null > checksums.txt || true
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: false
+          body: |
+            ## Y-UI ${{ github.ref_name }}
+
+            Xray-core Web 管理面板
+
+            ### 一键安装
+
+            ```bash
+            bash <(curl -Ls https://raw.githubusercontent.com/CNYuns/Yun/main/install.sh)
+            ```
+
+            ### 手动安装
+
+            1. 下载对应平台的压缩包
+            2. 解压到 `/usr/local/y-ui/`
+            3. 运行 `./y-ui-server --config config.yaml`
+
+            ### 支持平台
+
+            | 平台 | 架构 | 文件 |
+            |------|------|------|
+            | Linux | amd64 | y-ui-linux-amd64.tar.gz |
+            | Linux | arm64 | y-ui-linux-arm64.tar.gz |
+            | Linux | armv7 | y-ui-linux-arm.tar.gz |
+            | Windows | amd64 | y-ui-windows-amd64.zip |
+            | Windows | arm64 | y-ui-windows-arm64.zip |
+            | macOS | amd64 | y-ui-darwin-amd64.tar.gz |
+            | macOS | arm64 | y-ui-darwin-arm64.tar.gz |
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

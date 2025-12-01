@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  y-ui:
+    build: .
+    container_name: y-ui
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/usr/local/y-ui
+      - ./xray:/etc/xray
+      - ./logs:/var/log/y-ui
+    environment:
+      - TZ=Asia/Shanghai
+      - GIN_MODE=release
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.8'
+    networks:
+      - y-ui-network
+
+networks:
+  y-ui-network:
+    driver: bridge

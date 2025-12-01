@@ -1,0 +1,30 @@
+# Y-UI 配置文件示例
+# 首次启动时会自动生成安全的 JWT 密钥
+
+server:
+  addr: ":8080"          # 监听地址
+  mode: "release"        # gin 模式: debug/release
+
+auth:
+  # jwt_secret 会在首次启动时自动生成，无需手动配置
+  # 如需手动指定，请使用至少32位的随机字符串
+  token_ttl_hours: 24    # Token 有效期（小时）
+
+database:
+  driver: "sqlite"       # 数据库类型: sqlite/postgres
+  dsn: "y-ui.db"         # 数据库连接字符串
+
+xray:
+  binary_path: "/usr/local/xray/xray"    # Xray 二进制路径
+  config_path: "/etc/xray/config.json"   # Xray 配置文件路径
+  assets_path: "/usr/local/xray"         # Xray 资源目录
+
+tls:
+  auto_acme: false              # 是否自动申请证书 (需要配置 email)
+  cert_path: "/etc/y-ui/certs"  # 证书存储目录路径
+  # key_path: ""                # 私钥路径 (如为空则与证书同目录)
+  email: ""                     # ACME 注册邮箱 (auto_acme=true 时必填)
+
+log:
+  level: "info"          # 日志级别: debug/info/warn/error
+  output: "stdout"       # 日志输出: stdout/文件路径
