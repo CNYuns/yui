@@ -77,7 +77,8 @@ func isInsecureSecret(secret string) bool {
 			return true
 		}
 	}
-	return len(secret) < 32
+	// 要求至少 64 字符（256 位安全性）
+	return len(secret) < 64
 }
 
 // saveConfig 保存配置到文件
@@ -121,7 +122,7 @@ func Load(configPath string) (*Config, error) {
 	// 检查并自动生成 JWT 密钥
 	needSave := false
 	if isInsecureSecret(cfg.Auth.JWTSecret) {
-		cfg.Auth.JWTSecret = generateSecureSecret(32) // 生成64字符的十六进制密钥
+		cfg.Auth.JWTSecret = generateSecureSecret(64) // 生成128字符的十六进制密钥（512位）
 		needSave = true
 		fmt.Println("已自动生成安全的 JWT 密钥")
 	}

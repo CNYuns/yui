@@ -65,6 +65,12 @@ func (h *ClientHandler) Get(c *gin.Context) {
 		return
 	}
 
+	// 权限检查：非管理员只能查看自己创建的客户端
+	if !middleware.CanManageResource(c, client.CreatedByID) {
+		response.Forbidden(c, "无权访问此资源")
+		return
+	}
+
 	response.Success(c, client)
 }
 
@@ -94,6 +100,19 @@ func (h *ClientHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// 先获取客户端检查权限
+	existingClient, err := h.clientService.Get(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	// 权限检查：非管理员只能修改自己创建的客户端
+	if !middleware.CanManageResource(c, existingClient.CreatedByID) {
+		response.Forbidden(c, "无权修改此资源")
+		return
+	}
+
 	var req services.UpdateClientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "参数错误: "+err.Error())
@@ -117,6 +136,19 @@ func (h *ClientHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// 先获取客户端检查权限
+	existingClient, err := h.clientService.Get(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	// 权限检查：非管理员只能删除自己创建的客户端
+	if !middleware.CanManageResource(c, existingClient.CreatedByID) {
+		response.Forbidden(c, "无权删除此资源")
+		return
+	}
+
 	if err := h.clientService.Delete(uint(id)); err != nil {
 		response.Error(c, 3003, err.Error())
 		return
@@ -130,6 +162,19 @@ func (h *ClientHandler) ResetTraffic(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.BadRequest(c, "无效的ID")
+		return
+	}
+
+	// 先获取客户端检查权限
+	existingClient, err := h.clientService.Get(uint(id))
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	// 权限检查：非管理员只能重置自己创建的客户端流量
+	if !middleware.CanManageResource(c, existingClient.CreatedByID) {
+		response.Forbidden(c, "无权操作此资源")
 		return
 	}
 

@@ -23,7 +23,7 @@ import (
 
 var (
 	configPath = flag.String("config", "config.yaml", "配置文件路径")
-	Version    = "1.3.5" // 通过 -ldflags 注入
+	Version    = "1.4.0" // 通过 -ldflags 注入
 )
 
 func main() {
@@ -155,8 +155,9 @@ func setupRouter(xrayManager *xray.Manager) *gin.Engine {
 	api.POST("/auth/login", loginRateLimit, authHandler.Login)
 	api.POST("/auth/init", middleware.InitAdminProtection(), authHandler.InitAdmin)
 
-	// 订阅链接 (公开，通过 UUID 验证)
-	api.GET("/sub/:uuid", subHandler.GetSubscription)
+	// 订阅链接 (公开，通过 UUID 验证，添加速率限制防止枚举)
+	subRateLimit := middleware.RateLimit(30, 1*time.Minute) // 每分钟最多30次
+	api.GET("/sub/:uuid", subRateLimit, subHandler.GetSubscription)
 
 	// 需要认证的路由
 	auth := api.Group("")

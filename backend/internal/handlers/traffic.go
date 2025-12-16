@@ -3,6 +3,7 @@ package handlers
 import (
 	"strconv"
 
+	"y-ui/internal/middleware"
 	"y-ui/internal/services"
 	"y-ui/pkg/response"
 
@@ -11,11 +12,13 @@ import (
 
 type TrafficHandler struct {
 	trafficService *services.TrafficService
+	clientService  *services.ClientService
 }
 
 func NewTrafficHandler() *TrafficHandler {
 	return &TrafficHandler{
 		trafficService: services.NewTrafficService(),
+		clientService:  services.NewClientService(),
 	}
 }
 
@@ -37,6 +40,18 @@ func (h *TrafficHandler) GetClientTraffic(c *gin.Context) {
 		response.BadRequest(c, "无效的客户端ID")
 		return
 	}
+
+	// 权限检查：非管理员只能查看自己创建的客户端流量
+	client, err := h.clientService.Get(uint(id))
+	if err != nil {
+		response.NotFound(c, "客户端不存在")
+		return
+	}
+	if !middleware.CanManageResource(c, client.CreatedByID) {
+		response.Forbidden(c, "无权查看此客户端流量")
+		return
+	}
+
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
 
@@ -49,8 +64,14 @@ func (h *TrafficHandler) GetClientTraffic(c *gin.Context) {
 	response.Success(c, stats)
 }
 
-// GetInboundTraffic 获取入站流量
+// GetInboundTraffic 获取入站流量（仅管理员）
 func (h *TrafficHandler) GetInboundTraffic(c *gin.Context) {
+	// 权限检查：仅管理员可以查看入站流量
+	if middleware.GetUserRole(c) != middleware.RoleAdmin {
+		response.Forbidden(c, "仅管理员可查看入站流量")
+		return
+	}
+
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.BadRequest(c, "无效的入站ID")

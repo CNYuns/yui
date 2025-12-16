@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"y-ui/internal/database"
+	"y-ui/internal/middleware"
 	"y-ui/internal/models"
 	"y-ui/internal/services"
 	"y-ui/internal/xray"
 
 	"github.com/robfig/cron/v3"
+	"go.uber.org/zap"
 )
 
 type Scheduler struct {
@@ -86,19 +88,30 @@ func (s *Scheduler) collectTraffic() {
 	// 获取所有入站流量
 	inboundTraffic, err := s.statsClient.GetAllInboundTraffic()
 	if err != nil {
-		// Xray Stats API 可能未就绪，静默忽略
+		// 记录错误日志而非静默忽略
+		if middleware.Logger != nil {
+			middleware.Logger.Debug("获取入站流量失败", zap.Error(err))
+		}
 		return
 	}
 
 	// 获取所有用户流量
 	userTraffic, err := s.statsClient.GetAllUserTraffic()
 	if err != nil {
-		// 静默忽略
+		if middleware.Logger != nil {
+			middleware.Logger.Debug("获取用户流量失败", zap.Error(err))
+		}
 		return
 	}
 
 	// 获取入站到ID的映射
-	inbounds, _, _ := s.inboundService.List(1, 1000)
+	inbounds, _, err := s.inboundService.List(1, 1000)
+	if err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("获取入站列表失败", zap.Error(err))
+		}
+		return
+	}
 	inboundMap := make(map[string]uint)
 	for _, ib := range inbounds {
 		inboundMap[ib.Tag] = ib.ID
@@ -106,7 +119,12 @@ func (s *Scheduler) collectTraffic() {
 
 	// 获取客户端邮箱到ID的映射
 	var clients []models.Client
-	database.DB.Find(&clients)
+	if err := database.DB.Find(&clients).Error; err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("获取客户端列表失败", zap.Error(err))
+		}
+		return
+	}
 	clientMap := make(map[string]uint)
 	for _, c := range clients {
 		if c.Email != "" {
@@ -121,7 +139,11 @@ func (s *Scheduler) collectTraffic() {
 		}
 		if inboundID, ok := inboundMap[tag]; ok {
 			// 记录到日流量统计
-			s.trafficService.RecordTraffic(0, inboundID, traffic.Upload, traffic.Download)
+			if err := s.trafficService.RecordTraffic(0, inboundID, traffic.Upload, traffic.Download); err != nil {
+				if middleware.Logger != nil {
+					middleware.Logger.Error("记录入站流量失败", zap.String("tag", tag), zap.Error(err))
+				}
+			}
 		}
 	}
 
@@ -133,10 +155,11 @@ func (s *Scheduler) collectTraffic() {
 		if clientID, ok := clientMap[email]; ok {
 			// 更新客户端已用流量
 			totalBytes := traffic.Upload + traffic.Download
-			s.clientService.UpdateTraffic(clientID, totalBytes)
-
-			// 记录到日流量统计（需要找到对应的入站）
-			// 这里简化处理，只更新客户端总流量
+			if err := s.clientService.UpdateTraffic(clientID, totalBytes); err != nil {
+				if middleware.Logger != nil {
+					middleware.Logger.Error("更新客户端流量失败", zap.String("email", email), zap.Error(err))
+				}
+			}
 		}
 	}
 }
@@ -151,26 +174,52 @@ func (s *Scheduler) checkQuota() {
 	// 检查过期的客户端
 	expiredClients, err := s.clientService.GetExpiredClients()
 	if err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("获取过期客户端失败", zap.Error(err))
+		}
 		expiredClients = []models.Client{}
 	}
 	for _, client := range expiredClients {
-		s.clientService.DisableClient(client.ID)
-		needReload = true
+		if err := s.clientService.DisableClient(client.ID); err != nil {
+			if middleware.Logger != nil {
+				middleware.Logger.Error("禁用过期客户端失败", zap.Uint("client_id", client.ID), zap.Error(err))
+			}
+		} else {
+			needReload = true
+			if middleware.Logger != nil {
+				middleware.Logger.Info("已禁用过期客户端", zap.Uint("client_id", client.ID), zap.String("email", client.Email))
+			}
+		}
 	}
 
 	// 检查超量的客户端
 	overQuotaClients, err := s.clientService.GetOverQuotaClients()
 	if err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("获取超量客户端失败", zap.Error(err))
+		}
 		overQuotaClients = []models.Client{}
 	}
 	for _, client := range overQuotaClients {
-		s.clientService.DisableClient(client.ID)
-		needReload = true
+		if err := s.clientService.DisableClient(client.ID); err != nil {
+			if middleware.Logger != nil {
+				middleware.Logger.Error("禁用超量客户端失败", zap.Uint("client_id", client.ID), zap.Error(err))
+			}
+		} else {
+			needReload = true
+			if middleware.Logger != nil {
+				middleware.Logger.Info("已禁用超量客户端", zap.Uint("client_id", client.ID), zap.String("email", client.Email))
+			}
+		}
 	}
 
 	// 如果有客户端被禁用，重载 Xray
 	if needReload && s.xrayManager != nil {
-		s.xrayManager.Reload()
+		if err := s.xrayManager.Reload(); err != nil {
+			if middleware.Logger != nil {
+				middleware.Logger.Error("重载 Xray 失败", zap.Error(err))
+			}
+		}
 	}
 }
 
@@ -182,11 +231,22 @@ func (s *Scheduler) renewCertificates() {
 	// 获取需要续签的证书（30天内过期）
 	certs, err := s.certService.GetExpiringCertificates(30)
 	if err != nil {
-		certs = []models.Certificate{}
+		if middleware.Logger != nil {
+			middleware.Logger.Error("获取待续签证书失败", zap.Error(err))
+		}
+		return
 	}
 	for _, cert := range certs {
 		if cert.AutoRenew {
-			s.certService.Renew(cert.ID)
+			if err := s.certService.Renew(cert.ID); err != nil {
+				if middleware.Logger != nil {
+					middleware.Logger.Error("续签证书失败", zap.String("domain", cert.Domain), zap.Error(err))
+				}
+			} else {
+				if middleware.Logger != nil {
+					middleware.Logger.Info("证书续签成功", zap.String("domain", cert.Domain))
+				}
+			}
 		}
 	}
 }
@@ -198,11 +258,17 @@ func (s *Scheduler) backupDatabase() {
 
 	// 检查数据库文件是否存在
 	if _, err := os.Stat(s.dbPath); os.IsNotExist(err) {
+		if middleware.Logger != nil {
+			middleware.Logger.Warn("数据库文件不存在，跳过备份", zap.String("path", s.dbPath))
+		}
 		return
 	}
 
 	// 创建备份目录
 	if err := os.MkdirAll(s.backupDir, 0755); err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("创建备份目录失败", zap.String("dir", s.backupDir), zap.Error(err))
+		}
 		return
 	}
 
@@ -212,11 +278,22 @@ func (s *Scheduler) backupDatabase() {
 
 	// 复制数据库文件
 	if err := copyFile(s.dbPath, backupFile); err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("备份数据库失败", zap.String("src", s.dbPath), zap.String("dst", backupFile), zap.Error(err))
+		}
 		return
 	}
 
 	// 设置备份文件权限
-	os.Chmod(backupFile, 0600)
+	if err := os.Chmod(backupFile, 0600); err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Warn("设置备份文件权限失败", zap.String("file", backupFile), zap.Error(err))
+		}
+	}
+
+	if middleware.Logger != nil {
+		middleware.Logger.Info("数据库备份成功", zap.String("file", backupFile))
+	}
 
 	// 清理旧备份（保留最近7天）
 	s.cleanOldBackups(7)
@@ -254,10 +331,26 @@ func (s *Scheduler) cleanup() {
 	defer s.mu.Unlock()
 
 	// 清理90天前的流量统计
-	s.trafficService.CleanOldStats(90)
+	if err := s.trafficService.CleanOldStats(90); err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("清理旧流量统计失败", zap.Error(err))
+		}
+	} else {
+		if middleware.Logger != nil {
+			middleware.Logger.Info("已清理90天前的流量统计")
+		}
+	}
 
 	// 清理180天前的审计日志
-	s.auditService.CleanOldLogs(180)
+	if err := s.auditService.CleanOldLogs(180); err != nil {
+		if middleware.Logger != nil {
+			middleware.Logger.Error("清理旧审计日志失败", zap.Error(err))
+		}
+	} else {
+		if middleware.Logger != nil {
+			middleware.Logger.Info("已清理180天前的审计日志")
+		}
+	}
 }
 
 // copyFile 复制文件

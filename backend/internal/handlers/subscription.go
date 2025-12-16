@@ -3,6 +3,7 @@ package handlers
 import (
 	"strconv"
 
+	"y-ui/internal/middleware"
 	"y-ui/internal/services"
 	"y-ui/pkg/response"
 
@@ -10,12 +11,14 @@ import (
 )
 
 type SubscriptionHandler struct {
-	subService *services.SubscriptionService
+	subService    *services.SubscriptionService
+	clientService *services.ClientService
 }
 
 func NewSubscriptionHandler() *SubscriptionHandler {
 	return &SubscriptionHandler{
-		subService: services.NewSubscriptionService(),
+		subService:    services.NewSubscriptionService(),
+		clientService: services.NewClientService(),
 	}
 }
 
@@ -24,6 +27,17 @@ func (h *SubscriptionHandler) GetClientLinks(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		response.BadRequest(c, "无效的ID")
+		return
+	}
+
+	// 权限检查：非管理员只能查看自己创建的客户端链接
+	client, err := h.clientService.Get(uint(id))
+	if err != nil {
+		response.NotFound(c, "客户端不存在")
+		return
+	}
+	if !middleware.CanManageResource(c, client.CreatedByID) {
+		response.Forbidden(c, "无权访问此资源")
 		return
 	}
 
@@ -61,8 +75,7 @@ func (h *SubscriptionHandler) GetSubscription(c *gin.Context) {
 	}
 
 	// 通过 UUID 获取客户端
-	clientService := services.NewClientService()
-	client, err := clientService.GetByUUID(uuid)
+	client, err := h.clientService.GetByUUID(uuid)
 	if err != nil {
 		response.NotFound(c, "用户不存在")
 		return

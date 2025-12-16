@@ -79,7 +79,10 @@ func (s *SubscriptionService) GenerateSubscription(clientID uint, serverAddr str
 func (s *SubscriptionService) generateLink(client *models.Client, inbound *models.Inbound, serverAddr string) (string, error) {
 	var streamSettings map[string]interface{}
 	if inbound.StreamSettings != "" {
-		json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings)
+		if err := json.Unmarshal([]byte(inbound.StreamSettings), &streamSettings); err != nil {
+			// 记录错误但继续处理，使用默认值
+			streamSettings = make(map[string]interface{})
+		}
 	}
 
 	network := "tcp"
@@ -292,7 +295,9 @@ func (s *SubscriptionService) generateSSLink(client *models.Client, inbound *mod
 	// SS 需要从 inbound settings 中获取加密方式
 	var settings map[string]interface{}
 	if inbound.Settings != "" {
-		json.Unmarshal([]byte(inbound.Settings), &settings)
+		if err := json.Unmarshal([]byte(inbound.Settings), &settings); err != nil {
+			settings = make(map[string]interface{})
+		}
 	}
 
 	method := "aes-256-gcm"

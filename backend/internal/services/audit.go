@@ -5,6 +5,8 @@ import (
 
 	"y-ui/internal/database"
 	"y-ui/internal/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AuditService struct{}
@@ -55,10 +57,33 @@ func (s *AuditService) Create(userID uint, action, resource string, resourceID u
 	return database.DB.Create(&log).Error
 }
 
-// LogAction 记录操作
-func (s *AuditService) LogAction(userID uint, action, resource string, resourceID uint, detail string, c interface{}) {
-	// 从 gin.Context 提取信息的简化版本
-	s.Create(userID, action, resource, resourceID, detail, "", "", "success")
+// LogAction 记录操作（从 gin.Context 自动提取信息）
+func (s *AuditService) LogAction(userID uint, action, resource string, resourceID uint, detail string, c *gin.Context) {
+	ip := ""
+	userAgent := ""
+	if c != nil {
+		ip = c.ClientIP()
+		userAgent = c.Request.UserAgent()
+		// 限制 UserAgent 长度，防止过长
+		if len(userAgent) > 500 {
+			userAgent = userAgent[:500]
+		}
+	}
+	s.Create(userID, action, resource, resourceID, detail, ip, userAgent, "success")
+}
+
+// LogActionWithStatus 记录操作（包含状态）
+func (s *AuditService) LogActionWithStatus(userID uint, action, resource string, resourceID uint, detail string, c *gin.Context, status string) {
+	ip := ""
+	userAgent := ""
+	if c != nil {
+		ip = c.ClientIP()
+		userAgent = c.Request.UserAgent()
+		if len(userAgent) > 500 {
+			userAgent = userAgent[:500]
+		}
+	}
+	s.Create(userID, action, resource, resourceID, detail, ip, userAgent, status)
 }
 
 // CleanOldLogs 清理旧日志

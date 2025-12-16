@@ -142,7 +142,7 @@ func isPortInUse(protocol string, port int) bool {
 // CheckUpdate 检查 GitHub 版本更新
 func (h *SystemHandler) CheckUpdate(c *gin.Context) {
 	// 当前版本
-	currentVersion := "1.3.5"
+	currentVersion := "1.4.0"
 
 	// 从 GitHub API 获取最新版本
 	latestVersion, releaseURL, err := getLatestVersion()

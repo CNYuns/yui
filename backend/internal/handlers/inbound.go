@@ -92,9 +92,22 @@ func (h *InboundHandler) Create(c *gin.Context) {
 
 	// 验证必填字段
 	tag, _ := rawReq["tag"].(string)
-	if strings.TrimSpace(tag) == "" {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
 		response.BadRequest(c, "标签不能为空")
 		return
+	}
+	// 验证 Tag 长度和格式
+	if len(tag) > 100 {
+		response.BadRequest(c, "标签长度不能超过100个字符")
+		return
+	}
+	// 只允许字母、数字、下划线和连字符
+	for _, r := range tag {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-') {
+			response.BadRequest(c, "标签只能包含字母、数字、下划线和连字符")
+			return
+		}
 	}
 
 	port, _ := rawReq["port"].(float64)

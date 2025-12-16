@@ -103,13 +103,13 @@ type Certificate struct {
 // TrafficStats 流量统计
 type TrafficStats struct {
 	ID        uint      `gorm:"primaryKey" json:"id"`
-	ClientID  uint      `gorm:"index" json:"client_id"`
+	ClientID  uint      `gorm:"index:idx_traffic_client_date" json:"client_id"`
 	Client    *Client   `gorm:"foreignKey:ClientID" json:"client,omitempty"`
-	InboundID uint      `gorm:"index" json:"inbound_id"`
+	InboundID uint      `gorm:"index:idx_traffic_inbound_date" json:"inbound_id"`
 	Inbound   *Inbound  `gorm:"foreignKey:InboundID" json:"inbound,omitempty"`
 	Upload    int64     `gorm:"default:0" json:"upload"`   // bytes
 	Download  int64     `gorm:"default:0" json:"download"` // bytes
-	Date      string    `gorm:"size:10;index" json:"date"` // YYYY-MM-DD
+	Date      string    `gorm:"size:10;index:idx_traffic_client_date;index:idx_traffic_inbound_date;index:idx_traffic_date" json:"date"` // YYYY-MM-DD
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -43,12 +44,44 @@ func InitLogger(level, output string) error {
 	return nil
 }
 
+// sanitizeQuery 过滤敏感查询参数
+func sanitizeQuery(query string) string {
+	if query == "" {
+		return ""
+	}
+	// 敏感参数列表
+	sensitiveParams := []string{"password", "token", "secret", "key", "auth"}
+	parts := strings.Split(query, "&")
+	var sanitized []string
+	for _, part := range parts {
+		keyValue := strings.SplitN(part, "=", 2)
+		if len(keyValue) == 2 {
+			key := strings.ToLower(keyValue[0])
+			isSensitive := false
+			for _, s := range sensitiveParams {
+				if strings.Contains(key, s) {
+					isSensitive = true
+					break
+				}
+			}
+			if isSensitive {
+				sanitized = append(sanitized, keyValue[0]+"=[REDACTED]")
+			} else {
+				sanitized = append(sanitized, part)
+			}
+		} else {
+			sanitized = append(sanitized, part)
+		}
+	}
+	return strings.Join(sanitized, "&")
+}
+
 // RequestLogger 请求日志中间件
 func RequestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
+		query := sanitizeQuery(c.Request.URL.RawQuery)
 
 		c.Next()
 
@@ -63,7 +96,6 @@ func RequestLogger() gin.HandlerFunc {
 				zap.Int("status", status),
 				zap.Duration("latency", latency),
 				zap.String("ip", c.ClientIP()),
-				zap.String("user_agent", c.Request.UserAgent()),
 			)
 		}
 	}

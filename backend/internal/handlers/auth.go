@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"time"
+
 	"y-ui/internal/database"
 	"y-ui/internal/middleware"
 	"y-ui/internal/models"
@@ -13,11 +15,13 @@ import (
 
 type AuthHandler struct {
 	authService *services.AuthService
+	userService *services.UserService
 }
 
 func NewAuthHandler() *AuthHandler {
 	return &AuthHandler{
 		authService: services.NewAuthService(),
+		userService: services.NewUserService(),
 	}
 }
 
@@ -40,16 +44,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // Logout 登出
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// JWT 是无状态的，客户端删除 token 即可
+	// 将当前 Token 加入黑名单
+	if token, exists := c.Get("token"); exists {
+		if expiresAt, ok := c.Get("token_expires_at"); ok {
+			middleware.BlacklistToken(token.(string), expiresAt.(time.Time))
+		}
+	}
 	response.SuccessMsg(c, "登出成功")
 }
 
 // GetProfile 获取当前用户信息
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
-	userService := services.NewUserService()
 
-	user, err := userService.Get(userID)
+	user, err := h.userService.Get(userID)
 	if err != nil {
 		response.Error(c, 1002, err.Error())
 		return

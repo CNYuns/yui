@@ -168,9 +168,9 @@ func RateLimitLogin(maxAttempts int, window time.Duration) gin.HandlerFunc {
 // InitAdminProtection 保护初始化管理员接口
 func InitAdminProtection() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 检查是否已存在管理员
+		// 检查是否已存在任何管理员（包括未删除的）
 		var count int64
-		database.DB.Model(&models.User{}).Count(&count)
+		database.DB.Model(&models.User{}).Where("role = ?", "admin").Count(&count)
 		if count > 0 {
 			c.AbortWithStatusJSON(403, gin.H{
 				"code": 403,
@@ -178,6 +178,18 @@ func InitAdminProtection() gin.HandlerFunc {
 			})
 			return
 		}
+
+		// 额外检查：防止并发创建
+		var totalUsers int64
+		database.DB.Model(&models.User{}).Count(&totalUsers)
+		if totalUsers > 0 {
+			c.AbortWithStatusJSON(403, gin.H{
+				"code": 403,
+				"msg":  "系统已初始化，此接口已禁用",
+			})
+			return
+		}
+
 		c.Next()
 	}
 }

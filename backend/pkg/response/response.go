@@ -27,8 +27,19 @@ func SuccessMsg(c *gin.Context, msg string) {
 	})
 }
 
+// Error 返回业务错误（HTTP 200，业务错误码）
+// 用于预期内的业务逻辑错误
 func Error(c *gin.Context, code int, msg string) {
 	c.JSON(http.StatusOK, Response{
+		Code: code,
+		Msg:  msg,
+	})
+}
+
+// ErrorWithStatus 返回带 HTTP 状态码的错误
+// 用于需要明确 HTTP 状态码的场景
+func ErrorWithStatus(c *gin.Context, httpStatus int, code int, msg string) {
+	c.JSON(httpStatus, Response{
 		Code: code,
 		Msg:  msg,
 	})
@@ -65,6 +76,14 @@ func NotFound(c *gin.Context, msg string) {
 func ServerError(c *gin.Context, msg string) {
 	c.JSON(http.StatusInternalServerError, Response{
 		Code: 500,
+		Msg:  msg,
+	})
+}
+
+// TooManyRequests 请求过于频繁
+func TooManyRequests(c *gin.Context, msg string) {
+	c.JSON(http.StatusTooManyRequests, Response{
+		Code: 429,
 		Msg:  msg,
 	})
 }
